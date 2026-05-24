@@ -1,34 +1,31 @@
-interface Chip {
-  value: string
-  label: string
-}
-
 interface Props {
-  chips: Chip[]
+  options: { value: string; label: string }[]
   value: string
-  onChange: (v: string) => void
+  onChange: (value: string) => void
 }
 
-export function FilterChips({ chips, value, onChange }: Props) {
+export function FilterChips({ options, value, onChange }: Props) {
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      {chips.map((c) => (
+      {options.map((o) => (
         <button
-          key={c.value}
-          onClick={() => onChange(c.value)}
+          key={o.value}
+          onClick={() => onChange(o.value)}
           style={{
             padding: '5px 16px',
             borderRadius: 'var(--radius-pill)',
-            border: 'none',
+            border: `1.5px solid ${value === o.value ? 'var(--primary)' : 'var(--line)'}`,
             cursor: 'pointer',
             fontSize: 13,
             fontWeight: 600,
-            background: value === c.value ? 'var(--primary)' : 'var(--line-soft)',
-            color: value === c.value ? '#fff' : 'var(--ink-500)',
-            transition: 'background .15s, color .15s',
+            background: value === o.value ? 'var(--primary)' : '#fff',
+            color: value === o.value ? '#fff' : 'var(--ink-500)',
+            transition: 'background .15s, color .15s, border-color .15s',
           }}
+          onMouseEnter={(e) => { if (value !== o.value) e.currentTarget.style.background = 'var(--line-soft)' }}
+          onMouseLeave={(e) => { if (value !== o.value) e.currentTarget.style.background = '#fff' }}
         >
-          {c.label}
+          {o.label}
         </button>
       ))}
     </div>

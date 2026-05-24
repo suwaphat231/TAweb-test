@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { instructorApi } from '../../services/api'
 import { Card } from '../../components/ui/Card'
-import { Badge } from '../../components/ui/Badge'
+import { StatusBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { Input } from '../../components/ui/Input'
@@ -58,7 +58,14 @@ export default function InstructorAnnounce() {
         <Button onClick={() => setShowModal(true)}>+ สร้างประกาศรับสมัคร</Button>
       </div>
 
-      {courses.length === 0 && !isLoading && <EmptyState title="ยังไม่มีวิชา" description="สร้างประกาศรับสมัครวิชาแรกของคุณ" icon="📚" action={<Button onClick={() => setShowModal(true)}>สร้างเลย</Button>} />}
+      {courses.length === 0 && !isLoading && (
+        <EmptyState
+          title="ยังไม่มีวิชา"
+          description="สร้างประกาศรับสมัครวิชาแรกของคุณ"
+          icon="📚"
+          action={{ label: 'สร้างเลย', onClick: () => setShowModal(true) }}
+        />
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {courses.map((c) => (
@@ -67,7 +74,7 @@ export default function InstructorAnnounce() {
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-50)', padding: '2px 8px', borderRadius: 'var(--radius-pill)' }}>{c.code}</span>
-                  <Badge value={c.status} />
+                  <StatusBadge value={c.status} />
                 </div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink-900)', marginBottom: 4 }}>{c.title}</div>
                 <div style={{ fontSize: 13, color: 'var(--ink-500)' }}>
@@ -89,7 +96,7 @@ export default function InstructorAnnounce() {
         ))}
       </div>
 
-      <Modal open={showModal} onClose={closeModal} title={editId ? 'แก้ไขวิชา' : 'สร้างประกาศรับสมัคร'} width={560}>
+      <Modal isOpen={showModal} onClose={closeModal} title={editId ? 'แก้ไขวิชา' : 'สร้างประกาศรับสมัคร'} size="lg">
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <Input label="รหัสวิชา *" value={form.code} onChange={set('code')} placeholder="CS101" required />

@@ -1,43 +1,56 @@
-import type { ApplicationStatus, CourseStatus, UserRole } from '../../types'
+import type { ReactNode } from 'react'
 
-type BadgeVariant = ApplicationStatus | CourseStatus | UserRole | 'ta' | 'labboy' | string
+export type BadgeVariant = 'green' | 'amber' | 'red' | 'blue' | 'gray' | 'purple'
 
-const map: Record<string, { bg: string; color: string; label: string }> = {
-  accepted:      { bg: 'var(--green-bg)',   color: 'var(--green)',   label: 'รับแล้ว' },
-  rejected:      { bg: 'var(--red-bg)',     color: 'var(--red)',     label: 'ไม่รับ' },
-  withdrawn:     { bg: 'var(--line-soft)',  color: 'var(--ink-400)', label: 'ถอนใบสมัคร' },
-  open:          { bg: 'var(--green-bg)',   color: 'var(--green)',   label: 'เปิดรับสมัคร' },
-  closing_soon:  { bg: 'var(--amber-bg)',   color: 'var(--amber)',   label: 'ใกล้ปิด' },
-  closed:        { bg: 'var(--red-bg)',     color: 'var(--red)',     label: 'ปิดรับ' },
-  draft:         { bg: 'var(--line-soft)',  color: 'var(--ink-500)', label: 'ร่าง' },
-  student:       { bg: 'var(--blue-bg)',    color: 'var(--blue)',    label: 'นักศึกษา' },
-  instructor:    { bg: 'var(--primary-50)', color: 'var(--primary)', label: 'อาจารย์' },
-  staff:         { bg: 'var(--amber-bg)',   color: 'var(--amber)',   label: 'เจ้าหน้าที่' },
-  admin:         { bg: 'var(--red-bg)',     color: 'var(--red)',     label: 'Admin' },
-  ta:            { bg: 'var(--blue-bg)',    color: 'var(--blue)',    label: 'TA' },
-  labboy:        { bg: 'var(--primary-50)', color: 'var(--primary)', label: 'Lab Boy' },
+const variantMap: Record<BadgeVariant, { bg: string; color: string }> = {
+  green:  { bg: 'var(--green-bg)',  color: 'var(--green)' },
+  amber:  { bg: 'var(--amber-bg)',  color: 'var(--amber)' },
+  red:    { bg: 'var(--red-bg)',    color: 'var(--red)' },
+  blue:   { bg: 'var(--blue-bg)',   color: 'var(--blue)' },
+  gray:   { bg: 'var(--line-soft)', color: 'var(--ink-500)' },
+  purple: { bg: '#EDE9FE',          color: '#7C3AED' },
 }
 
-interface Props {
-  value: BadgeVariant
-  label?: string
-  size?: 'sm' | 'md'
+interface BadgeProps {
+  variant: BadgeVariant
+  children: ReactNode
+  showDot?: boolean
 }
 
-export function Badge({ value, label, size = 'md' }: Props) {
-  const p = map[value] ?? { bg: 'var(--line-soft)', color: 'var(--ink-500)', label: value }
+export function Badge({ variant, children, showDot }: BadgeProps) {
+  const { bg, color } = variantMap[variant]
   return (
     <span style={{
-      background: p.bg, color: p.color,
-      fontSize: size === 'sm' ? 11 : 12,
-      fontWeight: 600,
-      padding: size === 'sm' ? '1px 8px' : '2px 10px',
+      background: bg, color,
+      fontSize: 12, fontWeight: 600,
+      padding: '2px 10px',
       borderRadius: 'var(--radius-pill)',
-      display: 'inline-block',
-      lineHeight: '20px',
-      whiteSpace: 'nowrap',
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      lineHeight: '20px', whiteSpace: 'nowrap',
     }}>
-      {label ?? p.label}
+      {showDot && <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />}
+      {children}
     </span>
   )
+}
+
+const statusMap: Record<string, { variant: BadgeVariant; label: string }> = {
+  accepted:     { variant: 'green',  label: 'รับแล้ว' },
+  rejected:     { variant: 'red',    label: 'ไม่รับ' },
+  withdrawn:    { variant: 'gray',   label: 'ถอนใบสมัคร' },
+  open:         { variant: 'green',  label: 'เปิดรับสมัคร' },
+  closing_soon: { variant: 'amber',  label: 'ใกล้ปิด' },
+  closed:       { variant: 'red',    label: 'ปิดรับ' },
+  draft:        { variant: 'gray',   label: 'ร่าง' },
+  student:      { variant: 'blue',   label: 'นักศึกษา' },
+  instructor:   { variant: 'blue',   label: 'อาจารย์' },
+  staff:        { variant: 'amber',  label: 'เจ้าหน้าที่' },
+  admin:        { variant: 'red',    label: 'Admin' },
+  ta:           { variant: 'blue',   label: 'TA' },
+  labboy:       { variant: 'purple', label: 'Lab Boy' },
+}
+
+export function StatusBadge({ value }: { value: string }) {
+  const s = statusMap[value] ?? { variant: 'gray' as BadgeVariant, label: value }
+  return <Badge variant={s.variant}>{s.label}</Badge>
 }

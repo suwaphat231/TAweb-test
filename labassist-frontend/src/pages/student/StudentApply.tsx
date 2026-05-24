@@ -9,7 +9,7 @@ import { Button } from '../../components/ui/Button'
 import { SkeletonCard } from '../../components/ui/Skeleton'
 import type { Course, CourseStatus } from '../../types'
 
-const chips = [
+const filterOptions = [
   { value: '', label: 'ทั้งหมด' },
   { value: 'open', label: 'เปิดรับ' },
   { value: 'closing_soon', label: 'ใกล้ปิด' },
@@ -45,10 +45,6 @@ export default function StudentApply() {
     return myApps.some((a) => a.course_id === courseId && a.role_applied === role && a.status !== 'withdrawn')
   }
 
-  function handleApply(course: Course, role: 'ta' | 'labboy') {
-    setApplyTarget({ course, role })
-  }
-
   function confirmApply() {
     if (!applyTarget) return
     applyMutation.mutate({ course_id: applyTarget.course.id, role_applied: applyTarget.role, motivation })
@@ -61,7 +57,7 @@ export default function StudentApply() {
         <p style={{ color: 'var(--ink-500)', fontSize: 14 }}>เลือกวิชาที่คุณต้องการสมัคร</p>
       </div>
 
-      <FilterChips chips={chips} value={filter} onChange={setFilter} />
+      <FilterChips options={filterOptions} value={filter} onChange={setFilter} />
       <div style={{ height: 20 }} />
 
       {isLoading ? (
@@ -76,17 +72,17 @@ export default function StudentApply() {
               course={course}
               showApply
               applied={{ ta: isApplied(course.id, 'ta'), labboy: isApplied(course.id, 'labboy') }}
-              onApply={handleApply}
+              onApply={(c, role) => setApplyTarget({ course: c, role })}
             />
           ))}
         </div>
       )}
 
       <Modal
-        open={!!applyTarget}
+        isOpen={!!applyTarget}
         onClose={() => setApplyTarget(null)}
         title={`สมัคร ${applyTarget?.role === 'ta' ? 'TA' : 'Lab Boy'} — ${applyTarget?.course.code}`}
-        width={460}
+        size="sm"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ fontSize: 14, color: 'var(--ink-700)' }}>

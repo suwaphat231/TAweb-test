@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { authApi } from '../../services/api'
-import { Badge } from '../ui/Badge'
-import { Avatar } from '../ui/Avatar'
+import { StatusBadge } from '../ui/Badge'
+import { Avatar, getInitials } from '../ui/Avatar'
 
 export function Topbar() {
   const { user, logout } = useAuth()
@@ -31,10 +31,7 @@ export function Topbar() {
       boxShadow: 'var(--shadow-sm)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{
-          width: 32, height: 32, background: 'var(--primary)', borderRadius: 8,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
+        <div style={{ width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
           </svg>
@@ -45,10 +42,10 @@ export function Topbar() {
 
       {user && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <Avatar name={user.full_name} size={32} />
+          <Avatar initials={getInitials(user.full_name)} color="blue" size={32} />
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-900)', lineHeight: 1.2 }}>{user.full_name}</div>
-            <Badge value={user.role} size="sm" />
+            <StatusBadge value={user.role} />
           </div>
           <button
             onClick={handleLogout}

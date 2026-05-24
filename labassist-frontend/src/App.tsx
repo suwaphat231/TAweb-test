@@ -1,13 +1,10 @@
-import { useToast } from './hooks/useToast'
-import { ToastContainer } from './components/ui/Toast'
+import { ToastProvider } from './components/ui/Toast'
 import { AppRouter } from './router'
 
 export default function App() {
-  const { toasts, dismiss } = useToast()
   return (
-    <>
+    <ToastProvider>
       <AppRouter />
-      <ToastContainer toasts={toasts} dismiss={dismiss} />
-    </>
+    </ToastProvider>
   )
 }

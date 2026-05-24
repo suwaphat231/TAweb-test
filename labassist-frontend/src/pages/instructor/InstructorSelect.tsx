@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { instructorApi } from '../../services/api'
-import { Badge } from '../../components/ui/Badge'
+import { StatusBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Select } from '../../components/ui/Select'
 import { FilterChips } from '../../components/ui/FilterChips'
 import { Modal } from '../../components/ui/Modal'
 import { Textarea } from '../../components/ui/Textarea'
-import { Avatar } from '../../components/ui/Avatar'
+import { Avatar, getInitials } from '../../components/ui/Avatar'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Table } from '../../components/ui/Table'
 import type { Application } from '../../types'
@@ -48,7 +48,7 @@ export default function InstructorSelect() {
       key: 'student', header: 'นักศึกษา',
       render: (row: Application) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Avatar name={row.student_name} size={32} />
+          <Avatar initials={getInitials(row.student_name)} color="blue" size={32} />
           <div>
             <div style={{ fontWeight: 600, fontSize: 14 }}>{row.student_name}</div>
             <div style={{ fontSize: 12, color: 'var(--ink-400)' }}>{row.student_code}</div>
@@ -57,8 +57,8 @@ export default function InstructorSelect() {
       ),
     },
     { key: 'gpa', header: 'GPA', render: (row: Application) => <span style={{ fontWeight: 600 }}>{row.student_gpa?.toFixed(2) ?? '—'}</span> },
-    { key: 'role_applied', header: 'ตำแหน่ง', render: (row: Application) => <Badge value={row.role_applied} /> },
-    { key: 'status', header: 'สถานะ', render: (row: Application) => <Badge value={row.status} /> },
+    { key: 'role_applied', header: 'ตำแหน่ง', render: (row: Application) => <StatusBadge value={row.role_applied} /> },
+    { key: 'status', header: 'สถานะ', render: (row: Application) => <StatusBadge value={row.status} /> },
     {
       key: 'actions', header: '',
       render: (row: Application) => (
@@ -79,14 +79,11 @@ export default function InstructorSelect() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--ink-900)' }}>คัดเลือกผู้สมัคร</h1>
-        </div>
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--ink-900)' }}>คัดเลือกผู้สมัคร</h1>
         <Select
           options={courses.map((c) => ({ value: String(c.id), label: `${c.code} ${c.title}` }))}
           value={String(courseId)}
           onChange={(e) => setParams({ course: e.target.value })}
-          placeholder="เลือกวิชา..."
           style={{ width: 280 }}
         />
       </div>
@@ -97,7 +94,7 @@ export default function InstructorSelect() {
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <FilterChips
-              chips={[{value:'',label:'ทั้งหมด'},{value:'ta',label:'TA'},{value:'labboy',label:'Lab Boy'}]}
+              options={[{value:'',label:'ทั้งหมด'},{value:'ta',label:'TA'},{value:'labboy',label:'Lab Boy'}]}
               value={filter} onChange={setFilter}
             />
             {selected.length > 0 && (
@@ -109,11 +106,11 @@ export default function InstructorSelect() {
             )}
           </div>
 
-          <Table columns={columns as never} data={filtered as never} keyField="id" emptyText="ยังไม่มีผู้สมัคร" />
+          <Table columns={columns as never} data={filtered as never} loading={isLoading} emptyText="ยังไม่มีผู้สมัคร" />
         </>
       )}
 
-      <Modal open={!!reviewTarget} onClose={() => setReviewTarget(null)} title="ยืนยันไม่รับ" width={400}>
+      <Modal isOpen={!!reviewTarget} onClose={() => setReviewTarget(null)} title="ยืนยันไม่รับ" size="sm">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <p style={{ fontSize: 14, color: 'var(--ink-700)' }}>
             ต้องการปฏิเสธ <strong>{reviewTarget?.student_name}</strong>?

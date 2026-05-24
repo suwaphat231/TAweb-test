@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { studentApi } from '../../services/api'
-import { Badge } from '../../components/ui/Badge'
+import { StatusBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { FilterChips } from '../../components/ui/FilterChips'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -9,7 +9,7 @@ import { Skeleton } from '../../components/ui/Skeleton'
 import { Card } from '../../components/ui/Card'
 import type { ApplicationStatus } from '../../types'
 
-const chips = [
+const filterOptions = [
   { value: '', label: 'ทั้งหมด' },
   { value: 'accepted', label: 'รับแล้ว' },
   { value: 'rejected', label: 'ไม่รับ' },
@@ -39,12 +39,12 @@ export default function StudentStatus() {
         <p style={{ color: 'var(--ink-500)', fontSize: 14 }}>การสมัครทั้งหมดของคุณ</p>
       </div>
 
-      <FilterChips chips={chips} value={filter} onChange={setFilter} />
+      <FilterChips options={filterOptions} value={filter} onChange={setFilter} />
       <div style={{ height: 20 }} />
 
       {isLoading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {[1,2,3].map(i => <Skeleton key={i} height={88} radius={12} />)}
+          {[1,2,3].map(i => <Skeleton key={i} height={88} borderRadius={12} />)}
         </div>
       ) : filtered.length === 0 ? (
         <EmptyState title="ไม่มีการสมัคร" description="ยังไม่มีการสมัครในหมวดนี้" icon="📭" />
@@ -55,8 +55,8 @@ export default function StudentStatus() {
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>{app.course_code}</span>
-                  <Badge value={app.role_applied} />
-                  <Badge value={app.status} />
+                  <StatusBadge value={app.role_applied} />
+                  <StatusBadge value={app.status} />
                 </div>
                 <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink-900)' }}>{app.course_title}</div>
                 <div style={{ fontSize: 13, color: 'var(--ink-500)', marginTop: 2 }}>

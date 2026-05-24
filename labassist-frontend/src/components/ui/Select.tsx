@@ -4,12 +4,12 @@ interface Option { value: string; label: string }
 
 interface Props extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string
-  error?: string
+  hint?: string
   options: Option[]
-  placeholder?: string
+  error?: string
 }
 
-export function Select({ label, error, options, placeholder, style, ...rest }: Props) {
+export function Select({ label, hint, options, error, style, ...rest }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       {label && <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-700)' }}>{label}</label>}
@@ -23,14 +23,15 @@ export function Select({ label, error, options, placeholder, style, ...rest }: P
           outline: 'none',
           background: '#fff',
           width: '100%',
+          cursor: 'pointer',
           ...style,
         }}
         {...rest}
       >
-        {placeholder && <option value="">{placeholder}</option>}
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
       {error && <span style={{ fontSize: 12, color: 'var(--red)' }}>{error}</span>}
+      {hint && !error && <span style={{ fontSize: 12, color: 'var(--ink-400)' }}>{hint}</span>}
     </div>
   )
 }

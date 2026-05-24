@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../hooks/useAuth'
 import { studentApi } from '../../services/api'
 import { StatCard } from '../../components/ui/StatCard'
-import { Badge } from '../../components/ui/Badge'
+import { StatusBadge } from '../../components/ui/Badge'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Card } from '../../components/ui/Card'
 import { Link } from 'react-router-dom'
@@ -29,13 +29,13 @@ export default function StudentHome() {
 
       {isLoading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 16, marginBottom: 28 }}>
-          {[1,2,3].map(i => <Skeleton key={i} height={88} radius={12} />)}
+          {[1,2,3].map(i => <Skeleton key={i} height={88} borderRadius={12} />)}
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 16, marginBottom: 28 }}>
-          <StatCard label="การสมัครทั้งหมด" value={data?.stats.total ?? 0} color="var(--primary)" icon="📋" />
-          <StatCard label="รับแล้ว" value={data?.stats.accepted ?? 0} color="var(--green)" icon="✅" />
-          <StatCard label="ไม่รับ" value={data?.stats.rejected ?? 0} color="var(--red)" icon="❌" />
+          <StatCard label="การสมัครทั้งหมด" value={data?.stats.total ?? 0} iconColor="var(--primary)" icon="📋" />
+          <StatCard label="รับแล้ว" value={data?.stats.accepted ?? 0} iconColor="var(--green)" icon="✅" />
+          <StatCard label="ไม่รับ" value={data?.stats.rejected ?? 0} iconColor="var(--red)" icon="❌" />
         </div>
       )}
 
@@ -44,9 +44,9 @@ export default function StudentHome() {
         <Link to="/student/apply"><Button size="sm">+ สมัครวิชาใหม่</Button></Link>
       </div>
 
-      <Card padding={0} style={{ overflow: 'hidden' }}>
+      <Card style={{ overflow: 'hidden' }}>
         {isLoading ? (
-          <div style={{ padding: 24 }}><Skeleton count={4} height={20} gap={14} /></div>
+          <div style={{ padding: 24 }}><Skeleton lines={4} height={20} /></div>
         ) : (data?.applications.length ?? 0) === 0 ? (
           <div style={{ padding: '40px 24px', textAlign: 'center' }}>
             <p style={{ color: 'var(--ink-400)', marginBottom: 16 }}>ยังไม่มีการสมัครใดๆ</p>
@@ -58,8 +58,8 @@ export default function StudentHome() {
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 2 }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>{app.course_code}</span>
-                  <Badge value={app.role_applied} />
-                  <Badge value={app.status} />
+                  <StatusBadge value={app.role_applied} />
+                  <StatusBadge value={app.status} />
                 </div>
                 <div style={{ fontSize: 14, color: 'var(--ink-700)' }}>{app.course_title}</div>
               </div>

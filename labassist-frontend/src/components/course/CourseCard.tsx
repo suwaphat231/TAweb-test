@@ -1,6 +1,6 @@
 import type { Course } from '../../types'
 import { Card } from '../ui/Card'
-import { Badge } from '../ui/Badge'
+import { StatusBadge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 
 interface Props {
@@ -16,14 +16,13 @@ export function CourseCard({ course, onApply, applied = {}, showApply = false }:
     : null
 
   return (
-    <Card style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
-      {/* Header */}
+    <Card style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%', padding: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-        <div>
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-50)', padding: '2px 8px', borderRadius: 'var(--radius-pill)', marginRight: 6 }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-50)', padding: '2px 8px', borderRadius: 'var(--radius-pill)' }}>
             {course.code}
           </span>
-          <Badge value={course.status} />
+          <StatusBadge value={course.status} />
         </div>
         {daysLeft !== null && daysLeft >= 0 && (
           <span style={{ fontSize: 11, color: daysLeft <= 3 ? 'var(--red)' : 'var(--ink-400)', whiteSpace: 'nowrap' }}>
@@ -32,7 +31,6 @@ export function CourseCard({ course, onApply, applied = {}, showApply = false }:
         )}
       </div>
 
-      {/* Title */}
       <div>
         <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink-900)', marginBottom: 2 }}>{course.title}</h3>
         <p style={{ fontSize: 13, color: 'var(--ink-500)' }}>
@@ -40,20 +38,17 @@ export function CourseCard({ course, onApply, applied = {}, showApply = false }:
         </p>
       </div>
 
-      {/* Description */}
       {course.description && (
         <p style={{ fontSize: 13, color: 'var(--ink-500)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {course.description}
         </p>
       )}
 
-      {/* Slots */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 'auto' }}>
         <SlotChip label="TA" filled={course.ta_accepted} total={course.ta_slots} />
         <SlotChip label="Lab Boy" filled={course.labboy_accepted} total={course.labboy_slots} />
       </div>
 
-      {/* Apply buttons */}
       {showApply && (
         <div style={{ display: 'flex', gap: 8, paddingTop: 4, borderTop: '1px solid var(--line-soft)' }}>
           {course.ta_slots > 0 && (

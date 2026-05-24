@@ -1,22 +1,33 @@
+export type AvatarColor = 'blue' | 'purple' | 'amber' | 'pink' | 'gray'
+
+const gradients: Record<AvatarColor, string> = {
+  blue:   'linear-gradient(135deg, #3B82F6, #1B4FD8)',
+  purple: 'linear-gradient(135deg, #A78BFA, #7C3AED)',
+  amber:  'linear-gradient(135deg, #FCD34D, #D97706)',
+  pink:   'linear-gradient(135deg, #F9A8D4, #EC4899)',
+  gray:   'linear-gradient(135deg, #CBD5E1, #94A3B8)',
+}
+
 interface Props {
-  name: string
-  src?: string
+  initials: string
+  color: AvatarColor
   size?: number
 }
 
-export function Avatar({ name, src, size = 36 }: Props) {
-  const initials = name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
-  if (src) {
-    return <img src={src} alt={name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-  }
+export function Avatar({ initials, color, size = 36 }: Props) {
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
-      background: 'var(--primary-50)', color: 'var(--primary)',
+      background: gradients[color],
+      color: '#fff',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.38, fontWeight: 700, flexShrink: 0,
+      fontSize: size * 0.38, fontWeight: 700, flexShrink: 0, userSelect: 'none',
     }}>
-      {initials}
+      {initials.slice(0, 2).toUpperCase()}
     </div>
   )
+}
+
+export function getInitials(name: string): string {
+  return name.split(' ').map((w) => w[0] ?? '').join('').slice(0, 2).toUpperCase() || '?'
 }

@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { Card } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
-import { Avatar } from '../../components/ui/Avatar'
+import { Avatar, getInitials } from '../../components/ui/Avatar'
 import { Badge } from '../../components/ui/Badge'
 
 export default function StudentProfile() {
@@ -26,14 +26,14 @@ export default function StudentProfile() {
     <div style={{ maxWidth: 600 }}>
       <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--ink-900)', marginBottom: 24 }}>ข้อมูลส่วนตัว</h1>
 
-      <Card>
+      <Card style={{ padding: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24 }}>
-          <Avatar name={p?.full_name ?? '?'} size={64} />
+          <Avatar initials={getInitials(p?.full_name ?? '?')} color="blue" size={64} />
           <div>
             <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink-900)' }}>{p?.full_name}</div>
             <div style={{ fontSize: 14, color: 'var(--ink-500)', marginTop: 2 }}>{p?.email}</div>
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <Badge value="student" />
+              <Badge variant="blue">นักศึกษา</Badge>
               {p?.student_id && <span style={{ fontSize: 12, color: 'var(--ink-400)', alignSelf: 'center' }}>{p.student_id}</span>}
             </div>
           </div>
