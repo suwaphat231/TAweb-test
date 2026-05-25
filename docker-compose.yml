@@ -1,0 +1,60 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: labassist-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-labassist}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-labassist123}
+      POSTGRES_DB: ${DB_NAME:-labassist}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./labassist-backend/database/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-labassist}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./labassist-backend
+      dockerfile: Dockerfile
+    container_name: labassist-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-labassist}
+      DB_PASSWORD: ${DB_PASSWORD:-labassist123}
+      DB_NAME: ${DB_NAME:-labassist}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:3000}
+      PORT: 8080
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./labassist-frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api/v1
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    container_name: labassist-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  pgdata:

@@ -35,6 +35,7 @@ export function Badge({ variant, children, showDot }: BadgeProps) {
 }
 
 const statusMap: Record<string, { variant: BadgeVariant; label: string }> = {
+  pending:      { variant: 'amber',  label: 'รอพิจารณา' },
   accepted:     { variant: 'green',  label: 'รับแล้ว' },
   rejected:     { variant: 'red',    label: 'ไม่รับ' },
   withdrawn:    { variant: 'gray',   label: 'ถอนใบสมัคร' },

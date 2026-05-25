@@ -1,93 +1,120 @@
+import { useState } from 'react'
 import type { Course } from '../../types'
 import { Card } from '../ui/Card'
-import { StatusBadge } from '../ui/Badge'
+import { StatusBadge, Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 
 interface Props {
   course: Course
-  onApply?: (course: Course, role: 'ta' | 'labboy') => void
-  applied?: { ta?: boolean; labboy?: boolean }
-  showApply?: boolean
+  onApply?: (courseId: number, roleApplied: 'ta' | 'labboy') => void
+  isApplied?: boolean
+  appliedRole?: 'ta' | 'labboy'
 }
 
-export function CourseCard({ course, onApply, applied = {}, showApply = false }: Props) {
-  const daysLeft = course.deadline
-    ? Math.ceil((new Date(course.deadline).getTime() - Date.now()) / 86400000)
+export function CourseCard({ course, onApply, isApplied = false, appliedRole }: Props) {
+  const [showMenu, setShowMenu] = useState(false)
+
+  const taSlotsAvailable  = course.ta_slots > 0 && course.ta_accepted < course.ta_slots
+  const labBoySlotsAvailable = course.labboy_slots > 0 && course.labboy_accepted < course.labboy_slots
+  const hasAnySlot = course.ta_slots > 0 || course.labboy_slots > 0
+  const allFull = hasAnySlot && !taSlotsAvailable && !labBoySlotsAvailable
+
+  const deadline = course.deadline
+    ? new Date(course.deadline).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
     : null
 
+  function handleApply(role: 'ta' | 'labboy') {
+    onApply?.(course.id, role)
+    setShowMenu(false)
+  }
+
   return (
-    <Card style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%', padding: 24 }}>
+    <Card style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 20 }}>
+
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-50)', padding: '2px 8px', borderRadius: 'var(--radius-pill)' }}>
-            {course.code}
-          </span>
-          <StatusBadge value={course.status} />
+        <span style={{
+          fontSize: 12, fontWeight: 700,
+          color: 'var(--primary)', background: 'var(--primary-50)',
+          padding: '2px 10px', borderRadius: 'var(--radius-pill)',
+        }}>
+          {course.code}
+        </span>
+        <StatusBadge value={course.status} />
+      </div>
+
+      {/* Title */}
+      <div>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink-900)', lineHeight: 1.4, marginBottom: 8 }}>
+          {course.title}
+        </h3>
+
+        {/* Instructor */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: 'var(--ink-500)', marginBottom: 4 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          {course.instructor_name}
         </div>
-        {daysLeft !== null && daysLeft >= 0 && (
-          <span style={{ fontSize: 11, color: daysLeft <= 3 ? 'var(--red)' : 'var(--ink-400)', whiteSpace: 'nowrap' }}>
-            {daysLeft === 0 ? 'ปิดวันนี้' : `${daysLeft} วัน`}
-          </span>
+
+        {/* Deadline */}
+        {deadline && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: 'var(--ink-400)' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            ปิดรับ {deadline}
+          </div>
         )}
       </div>
 
-      <div>
-        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink-900)', marginBottom: 2 }}>{course.title}</h3>
-        <p style={{ fontSize: 13, color: 'var(--ink-500)' }}>
-          {course.instructor_name} · ภาค {course.semester}/{course.academic_year}
-        </p>
+      {/* Slot info */}
+      <div style={{ fontSize: 12, color: 'var(--ink-500)', display: 'flex', gap: 10 }}>
+        {course.ta_slots > 0 && (
+          <SlotBar label="TA" filled={course.ta_accepted} total={course.ta_slots} />
+        )}
+        {course.labboy_slots > 0 && (
+          <SlotBar label="Lab Boy" filled={course.labboy_accepted} total={course.labboy_slots} />
+        )}
       </div>
 
-      {course.description && (
-        <p style={{ fontSize: 13, color: 'var(--ink-500)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-          {course.description}
-        </p>
-      )}
-
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 'auto' }}>
-        <SlotChip label="TA" filled={course.ta_accepted} total={course.ta_slots} />
-        <SlotChip label="Lab Boy" filled={course.labboy_accepted} total={course.labboy_slots} />
+      {/* Footer actions */}
+      <div style={{ paddingTop: 4, borderTop: '1px solid var(--line-soft)' }}>
+        {course.status === 'closed' || course.status === 'draft' ? (
+          <Badge variant="gray">ปิดรับ</Badge>
+        ) : isApplied ? (
+          <Badge variant="green">
+            สมัครแล้ว ({appliedRole === 'ta' ? 'TA' : 'Lab Boy'})
+          </Badge>
+        ) : allFull ? (
+          <Button size="sm" variant="outline" disabled style={{ cursor: 'not-allowed' }}>เต็มแล้ว</Button>
+        ) : !showMenu ? (
+          <Button size="sm" onClick={() => setShowMenu(true)}>สมัคร</Button>
+        ) : (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            {taSlotsAvailable && (
+              <Button size="sm" onClick={() => handleApply('ta')}>สมัคร TA</Button>
+            )}
+            {labBoySlotsAvailable && (
+              <Button size="sm" variant="outline" onClick={() => handleApply('labboy')}>สมัคร Lab Boy</Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => setShowMenu(false)}>ยกเลิก</Button>
+          </div>
+        )}
       </div>
-
-      {showApply && (
-        <div style={{ display: 'flex', gap: 8, paddingTop: 4, borderTop: '1px solid var(--line-soft)' }}>
-          {course.ta_slots > 0 && (
-            <Button
-              size="sm"
-              variant={applied.ta ? 'success' : 'outline'}
-              disabled={applied.ta || course.status === 'closed'}
-              onClick={() => onApply?.(course, 'ta')}
-              style={{ flex: 1 }}
-            >
-              {applied.ta ? '✓ สมัคร TA แล้ว' : 'สมัคร TA'}
-            </Button>
-          )}
-          {course.labboy_slots > 0 && (
-            <Button
-              size="sm"
-              variant={applied.labboy ? 'success' : 'outline'}
-              disabled={applied.labboy || course.status === 'closed'}
-              onClick={() => onApply?.(course, 'labboy')}
-              style={{ flex: 1 }}
-            >
-              {applied.labboy ? '✓ สมัคร Lab Boy แล้ว' : 'สมัคร Lab Boy'}
-            </Button>
-          )}
-        </div>
-      )}
     </Card>
   )
 }
 
-function SlotChip({ label, filled, total }: { label: string; filled: number; total: number }) {
-  if (total === 0) return null
+function SlotBar({ label, filled, total }: { label: string; filled: number; total: number }) {
   const pct = Math.min((filled / total) * 100, 100)
+  const full = filled >= total
   return (
-    <div style={{ fontSize: 12, color: 'var(--ink-500)', display: 'flex', alignItems: 'center', gap: 4 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
       <span style={{ fontWeight: 600 }}>{label}</span>
-      <span style={{ color: filled >= total ? 'var(--red)' : 'var(--ink-400)' }}>{filled}/{total}</span>
-      <div style={{ width: 40, height: 4, background: 'var(--line)', borderRadius: 4 }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: pct >= 100 ? 'var(--red)' : 'var(--green)', borderRadius: 4 }} />
+      <span style={{ color: full ? 'var(--red)' : 'var(--ink-400)' }}>{filled}/{total}</span>
+      <div style={{ width: 36, height: 4, background: 'var(--line)', borderRadius: 4 }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: full ? 'var(--red)' : 'var(--green)', borderRadius: 4 }} />
       </div>
     </div>
   )

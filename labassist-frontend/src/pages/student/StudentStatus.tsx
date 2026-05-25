@@ -11,8 +11,9 @@ import type { ApplicationStatus } from '../../types'
 
 const filterOptions = [
   { value: '', label: 'ทั้งหมด' },
-  { value: 'accepted', label: 'รับแล้ว' },
-  { value: 'rejected', label: 'ไม่รับ' },
+  { value: 'accepted', label: 'ผ่านการคัดเลือก' },
+  { value: 'pending', label: 'รอพิจารณา' },
+  { value: 'rejected', label: 'ไม่ผ่าน' },
   { value: 'withdrawn', label: 'ถอนแล้ว' },
 ]
 
@@ -66,12 +67,12 @@ export default function StudentStatus() {
                 </div>
                 {app.note && <div style={{ fontSize: 12, color: 'var(--ink-400)', marginTop: 4, fontStyle: 'italic' }}>"{app.note}"</div>}
               </div>
-              {app.status === 'accepted' && (
+              {(app.status === 'accepted' || app.status === 'pending') && (
                 <Button
                   variant="ghost"
                   size="sm"
                   loading={withdrawMut.isPending && withdrawMut.variables === app.id}
-                  onClick={() => { if (confirm('ยืนยันถอนใบสมัคร?')) withdrawMut.mutate(app.id) }}
+                  onClick={() => { if (confirm(`ยืนยันถอนใบสมัคร ${app.course_code}?`)) withdrawMut.mutate(app.id) }}
                   style={{ color: 'var(--red)', border: '1px solid var(--line)', whiteSpace: 'nowrap' }}
                 >
                   ถอนใบสมัคร

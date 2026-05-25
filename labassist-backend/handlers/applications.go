@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type ApplicationHandler struct{}
@@ -19,40 +20,43 @@ func (h *ApplicationHandler) StudentDashboard(c *gin.Context) {
 
 	type AppRow struct {
 		models.Application
-		StudentName string  `gorm:"column:student_name"`
-		CourseCode  string  `gorm:"column:course_code"`
-		CourseTitle string  `gorm:"column:course_title"`
+		CourseCode  string `gorm:"column:course_code"`
+		CourseTitle string `gorm:"column:course_title"`
 	}
 
 	var rows []AppRow
 	database.DB.Table("applications a").
-		Select("a.*, u.full_name AS student_name, c.code AS course_code, c.title AS course_title").
-		Joins("JOIN users u ON u.id = a.student_id").
+		Select("a.*, c.code AS course_code, c.title AS course_title").
 		Joins("JOIN courses c ON c.id = a.course_id").
 		Where("a.student_id = ?", studentID).
 		Order("a.applied_at DESC").
-		Limit(10).Scan(&rows)
+		Limit(5).Scan(&rows)
 
-	apps := make([]models.Application, len(rows))
+	recentApps := make([]models.Application, len(rows))
 	for i, r := range rows {
-		apps[i] = r.Application
-		apps[i].StudentName = r.StudentName
-		apps[i].CourseCode = r.CourseCode
-		apps[i].CourseTitle = r.CourseTitle
+		recentApps[i] = r.Application
+		recentApps[i].CourseCode = r.CourseCode
+		recentApps[i].CourseTitle = r.CourseTitle
 	}
 
-	var stats struct {
-		Total    int64 `json:"total"`
-		Accepted int64 `json:"accepted"`
-		Rejected int64 `json:"rejected"`
-	}
-	database.DB.Model(&models.Application{}).Where("student_id = ?", studentID).Count(&stats.Total)
-	database.DB.Model(&models.Application{}).Where("student_id = ? AND status = 'accepted'", studentID).Count(&stats.Accepted)
-	database.DB.Model(&models.Application{}).Where("student_id = ? AND status = 'rejected'", studentID).Count(&stats.Rejected)
+	var recentCourses []models.Course
+	database.DB.Table("courses c").
+		Select("c.*, u.full_name AS instructor_name").
+		Joins("JOIN users u ON u.id = c.instructor_id").
+		Where("c.status IN ('open','closing_soon')").
+		Order("c.created_at DESC").
+		Limit(3).Scan(&recentCourses)
+
+	var openCount int64
+	database.DB.Model(&models.Course{}).Where("status IN ('open','closing_soon')").Count(&openCount)
+	var appliedCount int64
+	database.DB.Model(&models.Application{}).
+		Where("student_id = ? AND status != 'withdrawn'", studentID).Count(&appliedCount)
 
 	c.JSON(http.StatusOK, gin.H{
-		"applications": apps,
-		"stats":        gin.H{"total": stats.Total, "accepted": stats.Accepted, "rejected": stats.Rejected},
+		"recent_applications": recentApps,
+		"recent_courses":      recentCourses,
+		"stats":               gin.H{"open_courses": openCount, "applied": appliedCount},
 	})
 }
 
@@ -106,6 +110,16 @@ func (h *ApplicationHandler) Apply(c *gin.Context) {
 		return
 	}
 
+	// Check slot availability
+	if body.RoleApplied == models.RoleTA && course.TAAccepted >= course.TASlots {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "TA slots are full"})
+		return
+	}
+	if body.RoleApplied == models.RoleLabBoy && course.LabBoyAccepted >= course.LabBoySlots {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Lab Boy slots are full"})
+		return
+	}
+
 	app := models.Application{
 		StudentID:   studentID.(uint),
 		CourseID:    body.CourseID,
@@ -118,12 +132,13 @@ func (h *ApplicationHandler) Apply(c *gin.Context) {
 		return
 	}
 
-	// Update accepted count
+	// Increment accepted count
 	field := "ta_accepted"
 	if body.RoleApplied == models.RoleLabBoy {
 		field = "labboy_accepted"
 	}
-	database.DB.Model(&course).UpdateColumn(field, course.TAAccepted+1)
+	database.DB.Model(&models.Course{}).Where("id = ?", body.CourseID).
+		UpdateColumn(field, gorm.Expr(field+" + 1"))
 
 	c.JSON(http.StatusCreated, app)
 }
@@ -137,7 +152,24 @@ func (h *ApplicationHandler) Withdraw(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "application not found"})
 		return
 	}
+	if app.Status == models.AppWithdrawn {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "already withdrawn"})
+		return
+	}
+
+	prevStatus := app.Status
 	database.DB.Model(&app).Update("status", models.AppWithdrawn)
+
+	// Decrement slot count if was accepted
+	if prevStatus == models.AppAccepted {
+		field := "ta_accepted"
+		if app.RoleApplied == models.RoleLabBoy {
+			field = "labboy_accepted"
+		}
+		database.DB.Model(&models.Course{}).Where("id = ?", app.CourseID).
+			UpdateColumn(field, gorm.Expr(field+" - 1"))
+	}
+
 	c.JSON(http.StatusOK, app)
 }
 
@@ -170,6 +202,7 @@ func (h *ApplicationHandler) Review(c *gin.Context) {
 		}
 	}
 
+	prevStatus := app.Status
 	now := time.Now()
 	rid := reviewerID.(uint)
 	database.DB.Model(&app).Updates(map[string]interface{}{
@@ -178,6 +211,30 @@ func (h *ApplicationHandler) Review(c *gin.Context) {
 		"reviewed_by_id": rid,
 		"note":           body.Note,
 	})
+
+	// Manage accepted count
+	field := "ta_accepted"
+	if app.RoleApplied == models.RoleLabBoy {
+		field = "labboy_accepted"
+	}
+	if body.Status == models.AppAccepted && prevStatus != models.AppAccepted {
+		var course models.Course
+		database.DB.First(&course, app.CourseID)
+		if field == "ta_accepted" && course.TAAccepted >= course.TASlots {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "TA slots are full"})
+			return
+		}
+		if field == "labboy_accepted" && course.LabBoyAccepted >= course.LabBoySlots {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Lab Boy slots are full"})
+			return
+		}
+		database.DB.Model(&models.Course{}).Where("id = ?", app.CourseID).
+			UpdateColumn(field, gorm.Expr(field+" + 1"))
+	} else if prevStatus == models.AppAccepted && body.Status != models.AppAccepted {
+		database.DB.Model(&models.Course{}).Where("id = ?", app.CourseID).
+			UpdateColumn(field, gorm.Expr(field+" - 1"))
+	}
+
 	c.JSON(http.StatusOK, app)
 }
 
@@ -214,10 +271,18 @@ func (h *ApplicationHandler) UpdateProfile(c *gin.Context) {
 	studentID, _ := c.Get("user_id")
 	var body map[string]interface{}
 	c.ShouldBindJSON(&body)
-	delete(body, "password_hash")
-	delete(body, "role")
+
+	allowed := map[string]interface{}{}
+	for _, k := range []string{"full_name", "year", "faculty"} {
+		if v, ok := body[k]; ok {
+			allowed[k] = v
+		}
+	}
+
 	var user models.User
 	database.DB.First(&user, studentID)
-	database.DB.Model(&user).Updates(body)
+	if len(allowed) > 0 {
+		database.DB.Model(&user).Updates(allowed)
+	}
 	c.JSON(http.StatusOK, user)
 }

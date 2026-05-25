@@ -18,6 +18,7 @@ type Course struct {
 	InstructorID   uint         `gorm:"not null" json:"instructor_id"`
 	Instructor     User         `gorm:"foreignKey:InstructorID" json:"-"`
 	InstructorName string       `gorm:"-" json:"instructor_name"`
+	ApplicantCount int          `gorm:"-" json:"applicant_count"`
 	Semester       string       `gorm:"size:10;not null" json:"semester"`
 	AcademicYear   int          `gorm:"not null" json:"academic_year"`
 	TASlots        int          `gorm:"default:0" json:"ta_slots"`

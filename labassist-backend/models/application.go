@@ -6,6 +6,7 @@ type AppStatus string
 type RoleApplied string
 
 const (
+	AppPending   AppStatus = "pending"
 	AppAccepted  AppStatus = "accepted"
 	AppRejected  AppStatus = "rejected"
 	AppWithdrawn AppStatus = "withdrawn"
@@ -21,7 +22,7 @@ type Application struct {
 	CourseID       uint        `gorm:"not null" json:"course_id"`
 	Course         Course      `gorm:"foreignKey:CourseID" json:"-"`
 	RoleApplied    RoleApplied `gorm:"type:role_applied;not null" json:"role_applied"`
-	Status         AppStatus   `gorm:"type:app_status;default:'accepted'" json:"status"`
+	Status         AppStatus   `gorm:"type:app_status;default:'pending'" json:"status"`
 	Motivation     *string     `gorm:"type:text" json:"motivation,omitempty"`
 	AppliedAt      time.Time   `gorm:"default:CURRENT_TIMESTAMP" json:"applied_at"`
 	ReviewedAt     *time.Time  `json:"reviewed_at,omitempty"`
@@ -33,6 +34,9 @@ type Application struct {
 	StudentName    string  `gorm:"-" json:"student_name"`
 	StudentCode    string  `gorm:"-" json:"student_code"`
 	StudentGPA     float64 `gorm:"-" json:"student_gpa"`
+	StudentEmail   string  `gorm:"-" json:"student_email,omitempty"`
+	StudentFaculty string  `gorm:"-" json:"student_faculty,omitempty"`
+	StudentYear    int     `gorm:"-" json:"student_year,omitempty"`
 	CourseCode     string  `gorm:"-" json:"course_code"`
 	CourseTitle    string  `gorm:"-" json:"course_title"`
 	ReviewedByName string  `gorm:"-" json:"reviewed_by_name,omitempty"`

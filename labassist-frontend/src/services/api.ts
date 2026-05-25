@@ -19,7 +19,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    if (err.response?.status === 401 && !window.location.pathname.includes('/login')) {
       useAuthStore.getState().logout()
       window.location.href = '/login'
     }
@@ -64,14 +64,19 @@ export const applicationsAPI = {
 
 export const studentAPI = {
   getDashboard: () =>
-    api.get<{ applications: Application[]; stats: Record<string, number> }>('/student/dashboard').then((r) => r.data),
+    api.get<{
+      recent_applications: Application[]
+      recent_courses: Course[]
+      stats: { open_courses: number; applied: number }
+    }>('/student/dashboard').then((r) => r.data),
   getProfile: () => api.get<User>('/student/profile').then((r) => r.data),
   updateProfile: (data: Partial<User>) => api.put<User>('/student/profile', data).then((r) => r.data),
 }
 
 export const adminAPI = {
   stats: () => api.get<AdminStats>('/admin/stats').then((r) => r.data),
-  users: () => api.get<User[]>('/admin/users').then((r) => r.data),
+  users: (params?: { limit?: number; offset?: number; role?: string; search?: string }) =>
+    api.get<User[]>('/admin/users', { params }).then((r) => r.data),
   createUser: (data: Partial<User> & { password?: string }) =>
     api.post<User>('/admin/users', data).then((r) => r.data),
   updateUserStatus: (id: number, is_active: boolean) =>

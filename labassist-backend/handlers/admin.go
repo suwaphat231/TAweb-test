@@ -48,13 +48,14 @@ func NewAdminHandler() *AdminHandler { return &AdminHandler{} }
 
 func (h *AdminHandler) Stats(c *gin.Context) {
 	var stats struct {
-		TotalUsers         int64 `json:"total_users"`
-		TotalStudents      int64 `json:"total_students"`
-		TotalInstructors   int64 `json:"total_instructors"`
-		TotalCourses       int64 `json:"total_courses"`
-		OpenCourses        int64 `json:"open_courses"`
-		TotalApplications  int64 `json:"total_applications"`
+		TotalUsers           int64 `json:"total_users"`
+		TotalStudents        int64 `json:"total_students"`
+		TotalInstructors     int64 `json:"total_instructors"`
+		TotalCourses         int64 `json:"total_courses"`
+		OpenCourses          int64 `json:"open_courses"`
+		TotalApplications    int64 `json:"total_applications"`
 		AcceptedApplications int64 `json:"accepted_applications"`
+		PendingApplications  int64 `json:"pending_applications"`
 	}
 	database.DB.Model(&models.User{}).Count(&stats.TotalUsers)
 	database.DB.Model(&models.User{}).Where("role = 'student'").Count(&stats.TotalStudents)
@@ -63,12 +64,24 @@ func (h *AdminHandler) Stats(c *gin.Context) {
 	database.DB.Model(&models.Course{}).Where("status = 'open' OR status = 'closing_soon'").Count(&stats.OpenCourses)
 	database.DB.Model(&models.Application{}).Count(&stats.TotalApplications)
 	database.DB.Model(&models.Application{}).Where("status = 'accepted'").Count(&stats.AcceptedApplications)
+	database.DB.Model(&models.Application{}).Where("status = 'pending'").Count(&stats.PendingApplications)
 	c.JSON(http.StatusOK, stats)
 }
 
 func (h *AdminHandler) Users(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	role   := c.Query("role")
+	search := c.Query("search")
+
+	if limit < 1 || limit > 200 { limit = 100 }
+
+	q := database.DB.Order("created_at DESC")
+	if role != "" { q = q.Where("role = ?", role) }
+	if search != "" { q = q.Where("full_name ILIKE ? OR email ILIKE ?", "%"+search+"%", "%"+search+"%") }
+
 	var users []models.User
-	database.DB.Order("created_at DESC").Find(&users)
+	q.Limit(limit).Offset(offset).Find(&users)
 	c.JSON(http.StatusOK, users)
 }
 

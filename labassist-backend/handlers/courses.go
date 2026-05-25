@@ -51,18 +51,33 @@ func (h *CourseHandler) InstructorList(c *gin.Context) {
 	instructorID, _ := c.Get("user_id")
 	role, _ := c.Get("role")
 
-	query := database.DB.Preload("Instructor")
-	if role.(string) != "admin" {
-		query = query.Where("instructor_id = ?", instructorID)
+	type Row struct {
+		models.Course
+		InstructorFull string `gorm:"column:instructor_full"`
+		AppCount       int    `gorm:"column:app_count"`
 	}
 
-	var courses []models.Course
-	if err := query.Order("created_at DESC").Find(&courses).Error; err != nil {
+	q := database.DB.Table("courses c").
+		Select("c.*, u.full_name AS instructor_full, COUNT(a.id) AS app_count").
+		Joins("JOIN users u ON u.id = c.instructor_id").
+		Joins("LEFT JOIN applications a ON a.course_id = c.id AND a.status != 'withdrawn'").
+		Group("c.id, u.full_name, u.id")
+
+	if role.(string) != "admin" {
+		q = q.Where("c.instructor_id = ?", instructorID)
+	}
+
+	var rows []Row
+	if err := q.Order("c.created_at DESC").Scan(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	for i := range courses {
-		courses[i].InstructorName = courses[i].Instructor.FullName
+
+	courses := make([]models.Course, len(rows))
+	for i, r := range rows {
+		courses[i] = r.Course
+		courses[i].InstructorName = r.InstructorFull
+		courses[i].ApplicantCount = r.AppCount
 	}
 	c.JSON(http.StatusOK, courses)
 }
@@ -170,23 +185,40 @@ func (h *CourseHandler) Applicants(c *gin.Context) {
 		return
 	}
 
+	roleFilter  := c.Query("role_applied")
+	statusFilter := c.Query("status")
+	search       := c.Query("search")
+
 	type AppRow struct {
 		models.Application
-		StudentName string  `gorm:"column:student_name"`
-		StudentCode string  `gorm:"column:student_code"`
-		StudentGPA  float64 `gorm:"column:student_gpa"`
-		CourseCode  string  `gorm:"column:course_code"`
-		CourseTitle string  `gorm:"column:course_title"`
+		StudentName    string  `gorm:"column:student_name"`
+		StudentCode    string  `gorm:"column:student_code"`
+		StudentGPA     float64 `gorm:"column:student_gpa"`
+		StudentEmail   string  `gorm:"column:student_email"`
+		StudentFaculty string  `gorm:"column:student_faculty"`
+		StudentYear    int     `gorm:"column:student_year"`
+		CourseCode     string  `gorm:"column:course_code"`
+		CourseTitle    string  `gorm:"column:course_title"`
+	}
+
+	q := database.DB.Table("applications a").
+		Select("a.*, u.full_name AS student_name, u.student_id AS student_code, u.gpa AS student_gpa, u.email AS student_email, u.faculty AS student_faculty, u.year AS student_year, c.code AS course_code, c.title AS course_title").
+		Joins("JOIN users u ON u.id = a.student_id").
+		Joins("JOIN courses c ON c.id = a.course_id").
+		Where("a.course_id = ?", courseID)
+
+	if roleFilter != "" {
+		q = q.Where("a.role_applied = ?", roleFilter)
+	}
+	if statusFilter != "" {
+		q = q.Where("a.status = ?", statusFilter)
+	}
+	if search != "" {
+		q = q.Where("u.full_name ILIKE ? OR u.student_id ILIKE ?", "%"+search+"%", "%"+search+"%")
 	}
 
 	var rows []AppRow
-	database.DB.Table("applications a").
-		Select("a.*, u.full_name AS student_name, u.student_id AS student_code, u.gpa AS student_gpa, c.code AS course_code, c.title AS course_title").
-		Joins("JOIN users u ON u.id = a.student_id").
-		Joins("JOIN courses c ON c.id = a.course_id").
-		Where("a.course_id = ?", courseID).
-		Order("a.applied_at DESC").
-		Scan(&rows)
+	q.Order("u.gpa DESC NULLS LAST").Scan(&rows)
 
 	apps := make([]models.Application, len(rows))
 	for i, r := range rows {
@@ -194,6 +226,9 @@ func (h *CourseHandler) Applicants(c *gin.Context) {
 		apps[i].StudentName = r.StudentName
 		apps[i].StudentCode = r.StudentCode
 		apps[i].StudentGPA = r.StudentGPA
+		apps[i].StudentEmail = r.StudentEmail
+		apps[i].StudentFaculty = r.StudentFaculty
+		apps[i].StudentYear = r.StudentYear
 		apps[i].CourseCode = r.CourseCode
 		apps[i].CourseTitle = r.CourseTitle
 	}

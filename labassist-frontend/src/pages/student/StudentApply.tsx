@@ -7,7 +7,8 @@ import { Modal } from '../../components/ui/Modal'
 import { Textarea } from '../../components/ui/Textarea'
 import { Button } from '../../components/ui/Button'
 import { SkeletonCard } from '../../components/ui/Skeleton'
-import type { Course, CourseStatus } from '../../types'
+import { useToast } from '../../components/ui/Toast'
+import type { CourseStatus } from '../../types'
 
 const filterOptions = [
   { value: '', label: 'ทั้งหมด' },
@@ -17,9 +18,11 @@ const filterOptions = [
 
 export default function StudentApply() {
   const [filter, setFilter] = useState('')
-  const [applyTarget, setApplyTarget] = useState<{ course: Course; role: 'ta' | 'labboy' } | null>(null)
+  const [applyTarget, setApplyTarget] = useState<{ courseId: number; role: 'ta' | 'labboy' } | null>(null)
+  const [selectedRole, setSelectedRole] = useState<'ta' | 'labboy'>('ta')
   const [motivation, setMotivation] = useState('')
   const qc = useQueryClient()
+  const showToast = useToast()
 
   const { data: courses = [], isLoading } = useQuery({
     queryKey: ['courses', filter],
@@ -33,22 +36,36 @@ export default function StudentApply() {
 
   const applyMutation = useMutation({
     mutationFn: studentApi.apply,
-    onSuccess: () => {
+    onSuccess: (app) => {
       qc.invalidateQueries({ queryKey: ['my-applications'] })
       qc.invalidateQueries({ queryKey: ['student-dashboard'] })
+      const roleLabel = app.role_applied === 'ta' ? 'TA' : 'Lab Boy'
+      const code = applyTargetCourse?.code ?? ''
+      showToast(`สมัครสำเร็จ! คุณได้รับการคัดเลือกเป็น ${roleLabel} วิชา ${code}`, 'success')
       setApplyTarget(null)
       setMotivation('')
     },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      showToast(err?.response?.data?.error ?? 'เกิดข้อผิดพลาด กรุณาลองใหม่', 'error')
+    },
   })
 
-  function isApplied(courseId: number, role: 'ta' | 'labboy') {
-    return myApps.some((a) => a.course_id === courseId && a.role_applied === role && a.status !== 'withdrawn')
+  function getCourseApp(courseId: number) {
+    return myApps.find((a) => a.course_id === courseId && a.status !== 'withdrawn')
+  }
+
+  function openModal(courseId: number, role: 'ta' | 'labboy') {
+    setSelectedRole(role)
+    setMotivation('')
+    setApplyTarget({ courseId, role })
   }
 
   function confirmApply() {
     if (!applyTarget) return
-    applyMutation.mutate({ course_id: applyTarget.course.id, role_applied: applyTarget.role, motivation })
+    applyMutation.mutate({ course_id: applyTarget.courseId, role_applied: selectedRole, motivation })
   }
+
+  const applyTargetCourse = applyTarget ? courses.find((c) => c.id === applyTarget.courseId) : null
 
   return (
     <div>
@@ -66,40 +83,98 @@ export default function StudentApply() {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 16 }}>
-          {courses.map((course) => (
-            <CourseCard
-              key={course.id}
-              course={course}
-              showApply
-              applied={{ ta: isApplied(course.id, 'ta'), labboy: isApplied(course.id, 'labboy') }}
-              onApply={(c, role) => setApplyTarget({ course: c, role })}
-            />
-          ))}
+          {courses.map((course) => {
+            const app = getCourseApp(course.id)
+            return (
+              <CourseCard
+                key={course.id}
+                course={course}
+                isApplied={!!app}
+                appliedRole={app?.role_applied as 'ta' | 'labboy' | undefined}
+                onApply={(courseId, role) => openModal(courseId, role)}
+              />
+            )
+          })}
         </div>
       )}
 
       <Modal
         isOpen={!!applyTarget}
         onClose={() => setApplyTarget(null)}
-        title={`สมัคร ${applyTarget?.role === 'ta' ? 'TA' : 'Lab Boy'} — ${applyTarget?.course.code}`}
+        title={`สมัครตำแหน่ง — ${applyTargetCourse?.code ?? ''}`}
         size="sm"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ fontSize: 14, color: 'var(--ink-700)' }}>
-            <strong>{applyTarget?.course.title}</strong>
-            <br />{applyTarget?.course.instructor_name}
+          {applyTargetCourse && (
+            <div style={{ fontSize: 14, color: 'var(--ink-700)' }}>
+              <strong>{applyTargetCourse.title}</strong>
+              <br />{applyTargetCourse.instructor_name}
+            </div>
+          )}
+
+          {/* Role radio cards */}
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-700)', marginBottom: 8 }}>เลือกตำแหน่ง</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {(['ta', 'labboy'] as const).map((role) => {
+                const isTA = role === 'ta'
+                const accepted = isTA ? (applyTargetCourse?.ta_accepted ?? 0) : (applyTargetCourse?.labboy_accepted ?? 0)
+                const slots = isTA ? (applyTargetCourse?.ta_slots ?? 0) : (applyTargetCourse?.labboy_slots ?? 0)
+                const isFull = accepted >= slots && slots > 0
+                const isSelected = selectedRole === role
+                return (
+                  <button
+                    key={role}
+                    type="button"
+                    disabled={isFull}
+                    onClick={() => !isFull && setSelectedRole(role)}
+                    style={{
+                      padding: '12px',
+                      borderRadius: 10,
+                      border: isSelected ? '2px solid var(--primary)' : '1.5px solid var(--line)',
+                      background: isSelected ? 'var(--primary-50)' : isFull ? '#F5F5F5' : '#fff',
+                      cursor: isFull ? 'not-allowed' : 'pointer',
+                      textAlign: 'left',
+                      opacity: isFull ? 0.5 : 1,
+                      transition: 'border .15s, background .15s',
+                    }}
+                  >
+                    <div style={{ fontSize: 13, fontWeight: 700, color: isSelected ? 'var(--primary)' : 'var(--ink-900)', marginBottom: 4 }}>
+                      {isTA ? 'TA' : 'Lab Boy'}
+                      {isFull && <span style={{ fontWeight: 400, fontSize: 11, marginLeft: 6, color: 'var(--red)' }}>เต็มแล้ว</span>}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--ink-500)' }}>
+                      {accepted} / {slots} คน
+                    </div>
+                    <div style={{
+                      marginTop: 6, height: 4, borderRadius: 999,
+                      background: 'var(--line-soft)',
+                      overflow: 'hidden',
+                    }}>
+                      <div style={{
+                        height: '100%', borderRadius: 999,
+                        background: isFull ? 'var(--red)' : isSelected ? 'var(--primary)' : 'var(--ink-400)',
+                        width: slots > 0 ? `${Math.min(100, (accepted / slots) * 100)}%` : '0%',
+                        transition: 'width .3s',
+                      }} />
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
           </div>
+
           <Textarea
             label="แรงจูงใจในการสมัคร (ไม่บังคับ)"
             placeholder="เล่าให้อาจารย์ทราบว่าทำไมคุณถึงอยากสมัครตำแหน่งนี้..."
-            rows={4}
+            rows={3}
             value={motivation}
             onChange={(e) => setMotivation(e.target.value)}
           />
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <Button variant="ghost" onClick={() => setApplyTarget(null)}>ยกเลิก</Button>
             <Button onClick={confirmApply} loading={applyMutation.isPending}>
-              ยืนยันสมัคร (ติดเลย)
+              ยืนยันสมัคร
             </Button>
           </div>
         </div>

@@ -1,91 +1,173 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { adminApi } from '../../services/api'
+import { Link } from 'react-router-dom'
+import { adminApi, coursesAPI } from '../../services/api'
 import { StatCard } from '../../components/ui/StatCard'
-import { Table } from '../../components/ui/Table'
 import { StatusBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Skeleton } from '../../components/ui/Skeleton'
-import type { User, UserRole } from '../../types'
+import { Avatar, getInitials } from '../../components/ui/Avatar'
+import { useToast } from '../../components/ui/Toast'
+import type { UserRole } from '../../types'
 
 export default function AdminOverview() {
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState({ username: '', password: '', full_name: '', email: '', role: 'instructor' as UserRole })
   const qc = useQueryClient()
+  const showToast = useToast()
 
-  const { data: stats, isLoading: statsLoading } = useQuery({ queryKey: ['admin-stats'], queryFn: adminApi.stats })
-  const { data: users = [], isLoading: usersLoading } = useQuery({ queryKey: ['admin-users'], queryFn: adminApi.users })
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['admin-stats'],
+    queryFn: adminApi.stats,
+  })
+  const { data: courses = [], isLoading: coursesLoading } = useQuery({
+    queryKey: ['all-courses'],
+    queryFn: () => coursesAPI.getAll(),
+  })
+  const { data: users = [], isLoading: usersLoading } = useQuery({
+    queryKey: ['admin-users', { limit: 7 }],
+    queryFn: () => adminApi.users({ limit: 7 }),
+  })
 
   const createMut = useMutation({
     mutationFn: adminApi.createUser,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-users'] }); setShowCreate(false); setForm({ username: '', password: '', full_name: '', email: '', role: 'instructor' }) },
-  })
-  const toggleMut = useMutation({
-    mutationFn: ({ id, is_active }: { id: number; is_active: boolean }) => adminApi.updateUserStatus(id, is_active),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-users'] })
+      qc.invalidateQueries({ queryKey: ['admin-stats'] })
+      setShowCreate(false)
+      setForm({ username: '', password: '', full_name: '', email: '', role: 'instructor' })
+      showToast('สร้างบัญชีผู้ใช้เรียบร้อยแล้ว', 'success')
+    },
+    onError: () => showToast('ไม่สามารถสร้างบัญชีได้ กรุณาตรวจสอบข้อมูล', 'error'),
   })
 
-  function set(k: keyof typeof form) { return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm(f => ({ ...f, [k]: e.target.value })) }
-
-  const columns = [
-    { key: 'full_name', header: 'ชื่อ', render: (u: User) => <span style={{ fontWeight: 600 }}>{u.full_name}</span> },
-    { key: 'username', header: 'Username', render: (u: User) => <code style={{ fontSize: 13 }}>{u.username || '—'}</code> },
-    { key: 'email', header: 'อีเมล', render: (u: User) => <span style={{ fontSize: 13 }}>{u.email}</span> },
-    { key: 'role', header: 'บทบาท', render: (u: User) => <StatusBadge value={u.role} /> },
-    { key: 'is_active', header: 'สถานะ', render: (u: User) => (
-      <span style={{ fontSize: 12, fontWeight: 600, color: u.is_active ? 'var(--green)' : 'var(--red)' }}>
-        {u.is_active ? 'ใช้งาน' : 'ระงับ'}
-      </span>
-    )},
-    { key: 'actions', header: '', render: (u: User) => (
-      <Button size="sm" variant="ghost"
-        onClick={() => toggleMut.mutate({ id: u.id, is_active: !u.is_active })}
-        style={{ color: u.is_active ? 'var(--red)' : 'var(--green)', border: '1px solid var(--line)' }}
-      >
-        {u.is_active ? 'ระงับ' : 'เปิดใช้'}
-      </Button>
-    )},
-  ]
+  function set(k: keyof typeof form) {
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setForm((f) => ({ ...f, [k]: e.target.value }))
+  }
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--ink-900)' }}>ภาพรวมระบบ</h1>
-        <Button onClick={() => setShowCreate(true)}>+ เพิ่มผู้ใช้</Button>
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink-900)' }}>ภาพรวมระบบ</h1>
+        <p style={{ fontSize: 14, color: 'var(--ink-500)', marginTop: 4 }}>สถิติและข้อมูลรวมของระบบ LabAssist</p>
       </div>
 
+      {/* 4 StatCards */}
       {statsLoading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 16, marginBottom: 28 }}>
           {[1,2,3,4].map(i => <Skeleton key={i} height={88} borderRadius={12} />)}
         </div>
-      ) : stats && (
+      ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 16, marginBottom: 28 }}>
-          <StatCard label="นักศึกษา" value={stats.total_students} iconColor="var(--blue)" icon="🎓" />
-          <StatCard label="อาจารย์" value={stats.total_instructors} iconColor="var(--primary)" icon="👨‍🏫" />
-          <StatCard label="วิชาเปิดรับ" value={stats.open_courses} iconColor="var(--green)" icon="📚" />
-          <StatCard label="การสมัครทั้งหมด" value={stats.total_applications} iconColor="var(--accent)" icon="📋" />
+          <StatCard label="ผู้ใช้งานทั้งหมด"  value={stats?.total_users ?? 0}            iconColor="var(--primary)" icon="👥" />
+          <StatCard label="วิชาที่เปิดรับ"     value={stats?.open_courses ?? 0}           iconColor="var(--green)"   icon="📚" />
+          <StatCard label="ผู้สมัครทั้งหมด"   value={stats?.total_applications ?? 0}     iconColor="var(--amber)"   icon="📋" />
+          <StatCard label="รอพิจารณา"          value={stats?.pending_applications ?? 0}  iconColor="var(--red)"     icon="⏳" />
         </div>
       )}
 
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink-900)', marginBottom: 16 }}>รายชื่อผู้ใช้</h2>
-      {usersLoading
-        ? <Skeleton lines={5} height={48} />
-        : <Table columns={columns as never} data={users as never} />
-      }
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 20, alignItems: 'start' }}>
+        {/* Courses table */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink-900)' }}>รายวิชา</h2>
+            <Link to="/admin/courses" style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>ดูทั้งหมด →</Link>
+          </div>
+          <div style={{ background: '#fff', borderRadius: 'var(--radius-card)', overflow: 'hidden', boxShadow: 'var(--shadow-md)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--bg)', borderBottom: '1.5px solid var(--line)' }}>
+                  {['รหัส', 'ชื่อวิชา', 'อาจารย์', 'ผู้สมัคร', 'สถานะ'].map((h) => (
+                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--ink-500)', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {coursesLoading && Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid var(--line-soft)' }}>
+                    {[1,2,3,4,5].map((j) => <td key={j} style={{ padding: '12px 14px' }}><Skeleton height={12} /></td>)}
+                  </tr>
+                ))}
+                {!coursesLoading && courses.map((c, i) => (
+                  <tr key={c.id} style={{ borderBottom: i < courses.length - 1 ? '1px solid var(--line-soft)' : 'none' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = '#fff')}
+                  >
+                    <td style={{ padding: '11px 14px', fontSize: 12, fontWeight: 700, color: 'var(--primary)' }}>{c.code}</td>
+                    <td style={{ padding: '11px 14px', fontSize: 13, fontWeight: 500, color: 'var(--ink-900)', maxWidth: 200 }}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</div>
+                    </td>
+                    <td style={{ padding: '11px 14px', fontSize: 12, color: 'var(--ink-500)' }}>{c.instructor_name}</td>
+                    <td style={{ padding: '11px 14px', fontSize: 12, color: 'var(--ink-700)' }}>
+                      {(c.ta_accepted + c.labboy_accepted)} / {(c.ta_slots + c.labboy_slots)}
+                    </td>
+                    <td style={{ padding: '11px 14px' }}><StatusBadge value={c.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
+        {/* Users list */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink-900)' }}>ผู้ใช้งาน</h2>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Button size="sm" onClick={() => setShowCreate(true)}>+ เพิ่มผู้ใช้</Button>
+              <Link to="/admin/users" style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>ดูทั้งหมด →</Link>
+            </div>
+          </div>
+          <div style={{ background: '#fff', borderRadius: 'var(--radius-card)', boxShadow: 'var(--shadow-md)', overflow: 'hidden' }}>
+            {usersLoading ? (
+              <div style={{ padding: 16 }}><Skeleton lines={7} height={44} /></div>
+            ) : users.map((u, i) => (
+              <div key={u.id} style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '12px 16px',
+                borderBottom: i < users.length - 1 ? '1px solid var(--line-soft)' : 'none',
+              }}>
+                <Avatar initials={getInitials(u.full_name)} color="blue" size={36} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {u.full_name}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--ink-400)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {u.email}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                  <StatusBadge value={u.role} />
+                  {!u.is_active && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--red)', background: 'var(--red-bg)', padding: '2px 6px', borderRadius: 999 }}>ระงับ</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Create User Modal */}
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="เพิ่มผู้ใช้ใหม่" size="md">
-        <form onSubmit={(e) => { e.preventDefault(); createMut.mutate(form) }} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <form
+          onSubmit={(e) => { e.preventDefault(); createMut.mutate(form) }}
+          style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+        >
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Input label="Username *" value={form.username} onChange={set('username')} required />
             <Input label="รหัสผ่าน *" type="password" value={form.password} onChange={set('password')} required />
           </div>
           <Input label="ชื่อ-นามสกุล *" value={form.full_name} onChange={set('full_name')} required />
           <Input label="อีเมล *" type="email" value={form.email} onChange={set('email')} required />
-          <Select label="บทบาท *" value={form.role} onChange={set('role')}
-            options={[{value:'instructor',label:'อาจารย์'},{value:'staff',label:'เจ้าหน้าที่'},{value:'admin',label:'Admin'}]} />
+          <Select
+            label="บทบาท *" value={form.role} onChange={set('role')}
+            options={[{ value: 'instructor', label: 'อาจารย์' }, { value: 'staff', label: 'เจ้าหน้าที่' }]}
+          />
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <Button type="button" variant="ghost" onClick={() => setShowCreate(false)}>ยกเลิก</Button>
             <Button type="submit" loading={createMut.isPending}>สร้างบัญชี</Button>

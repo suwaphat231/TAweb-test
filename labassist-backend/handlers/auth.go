@@ -7,6 +7,7 @@ import (
 	"labassist/middleware"
 	"labassist/models"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -69,6 +70,11 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	googleSub := payload.Subject
 	email, _ := payload.Claims["email"].(string)
 	name, _ := payload.Claims["name"].(string)
+
+	if !strings.HasSuffix(email, "@silpakorn.edu") {
+		c.JSON(http.StatusForbidden, gin.H{"error": "กรุณาใช้อีเมลมหาวิทยาลัย (@silpakorn.edu) เท่านั้น"})
+		return
+	}
 
 	var user models.User
 	isNewUser := false

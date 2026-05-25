@@ -1,5 +1,5 @@
 export type UserRole = 'student' | 'instructor' | 'staff' | 'admin'
-export type ApplicationStatus = 'accepted' | 'rejected' | 'withdrawn'
+export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'withdrawn'
 export type CourseStatus = 'open' | 'closing_soon' | 'closed' | 'draft'
 
 export interface User {
@@ -23,6 +23,7 @@ export interface Course {
   title: string
   instructor_id: number
   instructor_name: string
+  applicant_count?: number
   semester: string
   academic_year: number
   ta_slots: number
@@ -42,6 +43,9 @@ export interface Application {
   student_name: string
   student_code: string
   student_gpa: number
+  student_email?: string
+  student_faculty?: string
+  student_year?: number
   course_id: number
   course_code: string
   course_title: string
@@ -122,4 +126,5 @@ export interface AdminStats {
   open_courses: number
   total_applications: number
   accepted_applications: number
+  pending_applications: number
 }

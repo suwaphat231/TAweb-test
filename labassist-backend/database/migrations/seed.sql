@@ -2,9 +2,12 @@
 -- password: "password123" → bcrypt hash
 -- Generate real hash: go run tools/hash_password.go "password123"
 
+-- Add pending status to app_status enum (safe to run multiple times)
+ALTER TYPE app_status ADD VALUE IF NOT EXISTS 'pending' BEFORE 'accepted';
+
 DO $$
 DECLARE
-  pw TEXT := '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LPVKCDJa6ae';
+  pw TEXT := '$2a$10$Ws/75uKsYag.vd9tiCiAwuW143PDyh7.3n7dMYXmv6F2.fT5H6PBO';
 BEGIN
 
 -- Instructors
@@ -47,18 +50,18 @@ SELECT * FROM (VALUES
 ) AS v(code, title, instructor_id, semester, academic_year, ta_slots, labboy_slots, status, deadline)
 ON CONFLICT DO NOTHING;
 
--- Applications
+-- Applications (pending = รอรีวิว, accepted = รับแล้ว, rejected = ไม่รับ)
 INSERT INTO applications (student_id, course_id, role_applied, status, motivation)
 SELECT u.id, c.id, 'ta'::role_applied,     'accepted'::app_status, 'สนใจสอนการโปรแกรมให้น้องปี 1 ครับ' FROM users u, courses c WHERE u.email='pakpong@gmail.com'    AND c.code='CS101' ON CONFLICT DO NOTHING;
 INSERT INTO applications (student_id, course_id, role_applied, status, motivation)
-SELECT u.id, c.id, 'labboy'::role_applied,  'accepted'::app_status, 'อยากช่วยดูแลห้องแลปครับ'           FROM users u, courses c WHERE u.email='napatsara@gmail.com' AND c.code='CS101' ON CONFLICT DO NOTHING;
+SELECT u.id, c.id, 'labboy'::role_applied,  'pending'::app_status,  'อยากช่วยดูแลห้องแลปครับ'           FROM users u, courses c WHERE u.email='napatsara@gmail.com' AND c.code='CS101' ON CONFLICT DO NOTHING;
 INSERT INTO applications (student_id, course_id, role_applied, status, motivation)
 SELECT u.id, c.id, 'ta'::role_applied,     'accepted'::app_status, 'เรียน CS221 ได้ A มาครับ'           FROM users u, courses c WHERE u.email='phumipath@gmail.com' AND c.code='CS221' ON CONFLICT DO NOTHING;
 INSERT INTO applications (student_id, course_id, role_applied, status, motivation)
-SELECT u.id, c.id, 'ta'::role_applied,     'rejected'::app_status, 'ต้องการประสบการณ์ด้าน SE'           FROM users u, courses c WHERE u.email='warissara@gmail.com' AND c.code='CS405' ON CONFLICT DO NOTHING;
+SELECT u.id, c.id, 'ta'::role_applied,     'pending'::app_status,  'ต้องการประสบการณ์ด้าน SE'           FROM users u, courses c WHERE u.email='warissara@gmail.com' AND c.code='CS405' ON CONFLICT DO NOTHING;
 INSERT INTO applications (student_id, course_id, role_applied, status, motivation)
-SELECT u.id, c.id, 'ta'::role_applied,     'accepted'::app_status, 'มีประสบการณ์สอน Python มาก่อน'     FROM users u, courses c WHERE u.email='nathapol@gmail.com'  AND c.code='CS101' ON CONFLICT DO NOTHING;
+SELECT u.id, c.id, 'ta'::role_applied,     'pending'::app_status,  'มีประสบการณ์สอน Python มาก่อน'     FROM users u, courses c WHERE u.email='nathapol@gmail.com'  AND c.code='CS101' ON CONFLICT DO NOTHING;
 
--- Update accepted counts
-UPDATE courses SET ta_accepted = 2, labboy_accepted = 1 WHERE code = 'CS101';
+-- Update accepted counts (only counting accepted rows)
+UPDATE courses SET ta_accepted = 1, labboy_accepted = 0 WHERE code = 'CS101';
 UPDATE courses SET ta_accepted = 1 WHERE code = 'CS221';
