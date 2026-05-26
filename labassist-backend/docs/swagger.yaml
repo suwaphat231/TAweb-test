@@ -1,0 +1,1145 @@
+basePath: /api/v1
+definitions:
+  handlers.AdminStatsResponse:
+    properties:
+      accepted_applications:
+        example: 50
+        type: integer
+      open_courses:
+        example: 5
+        type: integer
+      pending_applications:
+        example: 30
+        type: integer
+      total_applications:
+        example: 200
+        type: integer
+      total_courses:
+        example: 15
+        type: integer
+      total_instructors:
+        example: 10
+        type: integer
+      total_students:
+        example: 80
+        type: integer
+      total_users:
+        example: 100
+        type: integer
+    type: object
+  handlers.ApplyRequest:
+    properties:
+      course_id:
+        example: 1
+        type: integer
+      motivation:
+        example: ต้องการช่วยสอนนักศึกษา
+        type: string
+      role_applied:
+        allOf:
+        - $ref: '#/definitions/models.RoleApplied'
+        example: ta
+    required:
+    - course_id
+    - role_applied
+    type: object
+  handlers.BulkReviewRequest:
+    properties:
+      application_ids:
+        items:
+          type: integer
+        type: array
+      note:
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/models.AppStatus'
+        example: accepted
+    required:
+    - application_ids
+    - status
+    type: object
+  handlers.BulkReviewResponse:
+    properties:
+      updated:
+        example: 3
+        type: integer
+    type: object
+  handlers.CreateCourseRequest:
+    properties:
+      academic_year:
+        example: 2567
+        type: integer
+      code:
+        example: CS101
+        type: string
+      description:
+        type: string
+      labboy_slots:
+        example: 2
+        type: integer
+      requirements:
+        type: string
+      semester:
+        example: "1"
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/models.CourseStatus'
+        example: draft
+      ta_slots:
+        example: 3
+        type: integer
+      title:
+        example: Introduction to Programming
+        type: string
+    required:
+    - academic_year
+    - code
+    - semester
+    - title
+    type: object
+  handlers.CreateUserRequest:
+    properties:
+      email:
+        example: john@silpakorn.edu
+        type: string
+      full_name:
+        example: John Doe
+        type: string
+      password:
+        example: securepassword
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/models.UserRole'
+        example: instructor
+      username:
+        example: johndoe
+        type: string
+    required:
+    - email
+    - full_name
+    - password
+    - role
+    - username
+    type: object
+  handlers.DashboardStats:
+    properties:
+      applied:
+        example: 2
+        type: integer
+      open_courses:
+        example: 5
+        type: integer
+    type: object
+  handlers.ErrorResponse:
+    properties:
+      error:
+        example: error message
+        type: string
+    type: object
+  handlers.GoogleLoginRequest:
+    properties:
+      credential:
+        example: eyJhbGci...
+        type: string
+    required:
+    - credential
+    type: object
+  handlers.GoogleLoginResponse:
+    properties:
+      is_new_user:
+        example: false
+        type: boolean
+      token:
+        example: eyJhbGci...
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+    type: object
+  handlers.LoginRequest:
+    properties:
+      password:
+        example: secret
+        type: string
+      username:
+        example: admin
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handlers.LoginResponse:
+    properties:
+      token:
+        example: eyJhbGci...
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+    type: object
+  handlers.LogsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.ActivityLog'
+        type: array
+      limit:
+        example: 50
+        type: integer
+      page:
+        example: 1
+        type: integer
+      total:
+        example: 100
+        type: integer
+    type: object
+  handlers.MeResponse:
+    properties:
+      user:
+        $ref: '#/definitions/models.User'
+    type: object
+  handlers.MessageResponse:
+    properties:
+      message:
+        example: ออกจากระบบแล้ว
+        type: string
+    type: object
+  handlers.ReviewRequest:
+    properties:
+      note:
+        example: ผ่านการคัดเลือก
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/models.AppStatus'
+        example: accepted
+    required:
+    - status
+    type: object
+  handlers.StudentDashboardResponse:
+    properties:
+      recent_applications:
+        items:
+          $ref: '#/definitions/models.Application'
+        type: array
+      recent_courses:
+        items:
+          $ref: '#/definitions/models.Course'
+        type: array
+      stats:
+        $ref: '#/definitions/handlers.DashboardStats'
+    type: object
+  handlers.UpdateCourseRequest:
+    properties:
+      academic_year:
+        example: 2567
+        type: integer
+      code:
+        example: CS101
+        type: string
+      description:
+        type: string
+      labboy_slots:
+        example: 2
+        type: integer
+      requirements:
+        type: string
+      semester:
+        example: "1"
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/models.CourseStatus'
+        example: open
+      ta_slots:
+        example: 3
+        type: integer
+      title:
+        example: Introduction to Programming
+        type: string
+    type: object
+  handlers.UpdateCourseStatusRequest:
+    properties:
+      status:
+        allOf:
+        - $ref: '#/definitions/models.CourseStatus'
+        example: open
+    type: object
+  handlers.UpdateProfileRequest:
+    properties:
+      faculty:
+        example: วิทยาการคอมพิวเตอร์
+        type: string
+      full_name:
+        example: สมชาย ใจดี
+        type: string
+      year:
+        example: 3
+        type: integer
+    type: object
+  handlers.UpdateUserStatusRequest:
+    properties:
+      is_active:
+        example: true
+        type: boolean
+    type: object
+  models.ActivityLog:
+    properties:
+      created_at:
+        type: string
+      duration_ms:
+        type: integer
+      id:
+        type: integer
+      ip:
+        type: string
+      method:
+        type: string
+      path:
+        type: string
+      role:
+        type: string
+      status_code:
+        type: integer
+      user_id:
+        type: integer
+      user_name:
+        type: string
+    type: object
+  models.AppStatus:
+    enum:
+    - pending
+    - accepted
+    - rejected
+    - withdrawn
+    type: string
+    x-enum-varnames:
+    - AppPending
+    - AppAccepted
+    - AppRejected
+    - AppWithdrawn
+  models.Application:
+    properties:
+      applied_at:
+        type: string
+      course_code:
+        type: string
+      course_id:
+        type: integer
+      course_title:
+        type: string
+      id:
+        type: integer
+      motivation:
+        type: string
+      note:
+        type: string
+      reviewed_at:
+        type: string
+      reviewed_by_id:
+        type: integer
+      reviewed_by_name:
+        type: string
+      role_applied:
+        $ref: '#/definitions/models.RoleApplied'
+      status:
+        $ref: '#/definitions/models.AppStatus'
+      student_code:
+        type: string
+      student_email:
+        type: string
+      student_faculty:
+        type: string
+      student_gpa:
+        type: number
+      student_id:
+        type: integer
+      student_name:
+        description: Computed fields (not in DB)
+        type: string
+      student_year:
+        type: integer
+    type: object
+  models.Course:
+    properties:
+      academic_year:
+        type: integer
+      applicant_count:
+        type: integer
+      code:
+        type: string
+      created_at:
+        type: string
+      deadline:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      instructor_id:
+        type: integer
+      instructor_name:
+        type: string
+      labboy_accepted:
+        type: integer
+      labboy_slots:
+        type: integer
+      requirements:
+        type: string
+      semester:
+        type: string
+      status:
+        $ref: '#/definitions/models.CourseStatus'
+      ta_accepted:
+        type: integer
+      ta_slots:
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.CourseStatus:
+    enum:
+    - open
+    - closing_soon
+    - closed
+    - draft
+    type: string
+    x-enum-varnames:
+    - StatusOpen
+    - StatusClosingSoon
+    - StatusClosed
+    - StatusDraft
+  models.RoleApplied:
+    enum:
+    - ta
+    - labboy
+    type: string
+    x-enum-varnames:
+    - RoleTA
+    - RoleLabBoy
+  models.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      faculty:
+        type: string
+      full_name:
+        type: string
+      google_sub:
+        type: string
+      gpa:
+        type: number
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      role:
+        $ref: '#/definitions/models.UserRole'
+      student_id:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+      year:
+        type: integer
+    type: object
+  models.UserRole:
+    enum:
+    - student
+    - instructor
+    - staff
+    - admin
+    type: string
+    x-enum-varnames:
+    - RoleStudent
+    - RoleInstructor
+    - RoleStaff
+    - RoleAdmin
+host: localhost:8080
+info:
+  contact: {}
+  description: API สำหรับระบบจัดการ TA ภาควิชา CS มหาวิทยาลัยศิลปากร
+  title: LabAssist API
+  version: "1.0"
+paths:
+  /admin/logs:
+    get:
+      parameters:
+      - description: กรองตาม user ID
+        in: query
+        name: user_id
+        type: integer
+      - description: กรองตาม HTTP method
+        enum:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        in: query
+        name: method
+        type: string
+      - description: หน้า (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: จำนวนต่อหน้า (default 50)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LogsResponse'
+      security:
+      - BearerAuth: []
+      summary: ดู activity log
+      tags:
+      - admin
+  /admin/stats:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.AdminStatsResponse'
+      security:
+      - BearerAuth: []
+      summary: สถิติภาพรวมของระบบ
+      tags:
+      - admin
+  /admin/users:
+    get:
+      parameters:
+      - description: กรองตาม role
+        enum:
+        - student
+        - instructor
+        - staff
+        - admin
+        in: query
+        name: role
+        type: string
+      - description: ค้นหาด้วยชื่อหรืออีเมล
+        in: query
+        name: search
+        type: string
+      - description: จำนวนต่อหน้า (default 100)
+        in: query
+        name: limit
+        type: integer
+      - description: ออฟเซ็ต (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: รายการผู้ใช้ทั้งหมด
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ข้อมูลผู้ใช้
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: สร้างผู้ใช้ใหม่
+      tags:
+      - admin
+  /admin/users/{id}/status:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: สถานะใหม่
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateUserStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: อัพเดตสถานะผู้ใช้ (เปิด/ปิด)
+      tags:
+      - admin
+  /auth/google:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Google credential
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.GoogleLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.GoogleLoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: เข้าสู่ระบบด้วย Google
+      tags:
+      - auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ข้อมูลล็อกอิน
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: เข้าสู่ระบบ
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MessageResponse'
+      security:
+      - BearerAuth: []
+      summary: ออกจากระบบ
+      tags:
+      - auth
+  /auth/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MeResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ดูข้อมูลผู้ใช้ปัจจุบัน
+      tags:
+      - auth
+  /courses:
+    get:
+      parameters:
+      - description: กรองตามสถานะ
+        enum:
+        - open
+        - closing_soon
+        - closed
+        - draft
+        in: query
+        name: status
+        type: string
+      - description: ค้นหาด้วยชื่อหรือรหัสวิชา
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Course'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: รายการวิชาทั้งหมด (สาธารณะ)
+      tags:
+      - courses
+  /courses/{id}:
+    get:
+      parameters:
+      - description: Course ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Course'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: ดูรายละเอียดวิชา (สาธารณะ)
+      tags:
+      - courses
+  /instructor/applications/{id}/review:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ผลการตรวจสอบ
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Application'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ตรวจสอบใบสมัคร (อาจารย์/สตาฟ/แอดมิน)
+      tags:
+      - instructor
+  /instructor/applications/bulk-review:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: รายการใบสมัครและผลการตรวจสอบ
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.BulkReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.BulkReviewResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ตรวจสอบใบสมัครแบบกลุ่ม
+      tags:
+      - instructor
+  /instructor/courses:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Course'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: รายการวิชาของอาจารย์
+      tags:
+      - courses
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ข้อมูลวิชา
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateCourseRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Course'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: สร้างวิชาใหม่
+      tags:
+      - courses
+  /instructor/courses/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Course ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ข้อมูลที่ต้องการแก้ไข
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateCourseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Course'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: แก้ไขข้อมูลวิชา
+      tags:
+      - courses
+  /instructor/courses/{id}/applicants:
+    get:
+      parameters:
+      - description: Course ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: กรองตามประเภทที่สมัคร
+        enum:
+        - ta
+        - labboy
+        in: query
+        name: role_applied
+        type: string
+      - description: กรองตามสถานะ
+        enum:
+        - pending
+        - accepted
+        - rejected
+        - withdrawn
+        in: query
+        name: status
+        type: string
+      - description: ค้นหาด้วยชื่อหรือรหัสนักศึกษา
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Application'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: รายชื่อผู้สมัครของวิชา
+      tags:
+      - courses
+  /instructor/courses/{id}/status:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Course ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: สถานะใหม่
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateCourseStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Course'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: อัพเดตสถานะวิชา
+      tags:
+      - courses
+  /student/applications:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Application'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: รายการใบสมัครของนักศึกษา
+      tags:
+      - student
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ข้อมูลการสมัคร
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ApplyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Application'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: สมัครเป็น TA หรือ Lab Boy
+      tags:
+      - student
+  /student/applications/{id}/withdraw:
+    put:
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Application'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ถอนใบสมัคร
+      tags:
+      - student
+  /student/dashboard:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.StudentDashboardResponse'
+      security:
+      - BearerAuth: []
+      summary: หน้าหลักนักศึกษา
+      tags:
+      - student
+  /student/profile:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+      security:
+      - BearerAuth: []
+      summary: ดูโปรไฟล์นักศึกษา
+      tags:
+      - student
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ข้อมูลโปรไฟล์ที่ต้องการแก้ไข
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+      security:
+      - BearerAuth: []
+      summary: แก้ไขโปรไฟล์นักศึกษา
+      tags:
+      - student
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

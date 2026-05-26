@@ -14,10 +14,50 @@ import (
 	"google.golang.org/api/idtoken"
 )
 
+// LoginRequest is the request body for login
+type LoginRequest struct {
+	Username string `json:"username" binding:"required" example:"admin"`
+	Password string `json:"password" binding:"required" example:"secret"`
+}
+
+// LoginResponse is returned on successful login
+type LoginResponse struct {
+	Token string      `json:"token" example:"eyJhbGci..."`
+	User  models.User `json:"user"`
+}
+
+// GoogleLoginRequest is the request body for Google OAuth
+type GoogleLoginRequest struct {
+	Credential string `json:"credential" binding:"required" example:"eyJhbGci..."`
+}
+
+// GoogleLoginResponse is returned on successful Google login
+type GoogleLoginResponse struct {
+	Token     string      `json:"token" example:"eyJhbGci..."`
+	User      models.User `json:"user"`
+	IsNewUser bool        `json:"is_new_user" example:"false"`
+}
+
+// MeResponse wraps the authenticated user
+type MeResponse struct {
+	User models.User `json:"user"`
+}
+
 type AuthHandler struct{ cfg *config.Config }
 
 func NewAuthHandler(cfg *config.Config) *AuthHandler { return &AuthHandler{cfg: cfg} }
 
+// Login godoc
+// @Summary      เข้าสู่ระบบ
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      LoginRequest  true  "ข้อมูลล็อกอิน"
+// @Success      200   {object}  LoginResponse
+// @Failure      400   {object}  ErrorResponse
+// @Failure      401   {object}  ErrorResponse
+// @Failure      403   {object}  ErrorResponse
+// @Router       /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var body struct {
 		Username string `json:"username" binding:"required"`
@@ -52,6 +92,17 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"token": token, "user": user})
 }
 
+// GoogleLogin godoc
+// @Summary      เข้าสู่ระบบด้วย Google
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      GoogleLoginRequest  true  "Google credential"
+// @Success      200   {object}  GoogleLoginResponse
+// @Failure      400   {object}  ErrorResponse
+// @Failure      401   {object}  ErrorResponse
+// @Failure      403   {object}  ErrorResponse
+// @Router       /auth/google [post]
 func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	var body struct {
 		Credential string `json:"credential" binding:"required"`
@@ -116,6 +167,14 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"token": token, "user": user, "is_new_user": isNewUser})
 }
 
+// Me godoc
+// @Summary      ดูข้อมูลผู้ใช้ปัจจุบัน
+// @Tags         auth
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  MeResponse
+// @Failure      404  {object}  ErrorResponse
+// @Router       /auth/me [get]
 func (h *AuthHandler) Me(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	var user models.User
@@ -126,6 +185,13 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
+// Logout godoc
+// @Summary      ออกจากระบบ
+// @Tags         auth
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  MessageResponse
+// @Router       /auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "ออกจากระบบแล้ว"})
 }

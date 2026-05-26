@@ -10,42 +10,43 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (h *AdminHandler) Logs(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 200 {
-		limit = 50
-	}
-	offset := (page - 1) * limit
+// CreateUserRequest is the request body for creating a user
+type CreateUserRequest struct {
+	Username string          `json:"username" binding:"required" example:"johndoe"`
+	Password string          `json:"password" binding:"required" example:"securepassword"`
+	FullName string          `json:"full_name" binding:"required" example:"John Doe"`
+	Email    string          `json:"email" binding:"required" example:"john@silpakorn.edu"`
+	Role     models.UserRole `json:"role" binding:"required" example:"instructor"`
+}
 
-	var total int64
-	q := database.DB.Model(&models.ActivityLog{})
-	if userID := c.Query("user_id"); userID != "" {
-		q = q.Where("user_id = ?", userID)
-	}
-	if method := c.Query("method"); method != "" {
-		q = q.Where("method = ?", method)
-	}
-	q.Count(&total)
+// UpdateUserStatusRequest is the request body for updating user active status
+type UpdateUserStatusRequest struct {
+	IsActive bool `json:"is_active" example:"true"`
+}
 
-	var logs []models.ActivityLog
-	q.Order("created_at DESC").Offset(offset).Limit(limit).Find(&logs)
-
-	c.JSON(http.StatusOK, gin.H{
-		"data":  logs,
-		"total": total,
-		"page":  page,
-		"limit": limit,
-	})
+// AdminStatsResponse is the response for admin stats endpoint
+type AdminStatsResponse struct {
+	TotalUsers           int64 `json:"total_users" example:"100"`
+	TotalStudents        int64 `json:"total_students" example:"80"`
+	TotalInstructors     int64 `json:"total_instructors" example:"10"`
+	TotalCourses         int64 `json:"total_courses" example:"15"`
+	OpenCourses          int64 `json:"open_courses" example:"5"`
+	TotalApplications    int64 `json:"total_applications" example:"200"`
+	AcceptedApplications int64 `json:"accepted_applications" example:"50"`
+	PendingApplications  int64 `json:"pending_applications" example:"30"`
 }
 
 type AdminHandler struct{}
 
 func NewAdminHandler() *AdminHandler { return &AdminHandler{} }
 
+// Stats godoc
+// @Summary      สถิติภาพรวมของระบบ
+// @Tags         admin
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  AdminStatsResponse
+// @Router       /admin/stats [get]
 func (h *AdminHandler) Stats(c *gin.Context) {
 	var stats struct {
 		TotalUsers           int64 `json:"total_users"`
@@ -68,6 +69,17 @@ func (h *AdminHandler) Stats(c *gin.Context) {
 	c.JSON(http.StatusOK, stats)
 }
 
+// Users godoc
+// @Summary      รายการผู้ใช้ทั้งหมด
+// @Tags         admin
+// @Produce      json
+// @Security     BearerAuth
+// @Param        role    query  string  false  "กรองตาม role" Enums(student, instructor, staff, admin)
+// @Param        search  query  string  false  "ค้นหาด้วยชื่อหรืออีเมล"
+// @Param        limit   query  int     false  "จำนวนต่อหน้า (default 100)"
+// @Param        offset  query  int     false  "ออฟเซ็ต (default 0)"
+// @Success      200     {array}   models.User
+// @Router       /admin/users [get]
 func (h *AdminHandler) Users(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
@@ -85,6 +97,17 @@ func (h *AdminHandler) Users(c *gin.Context) {
 	c.JSON(http.StatusOK, users)
 }
 
+// CreateUser godoc
+// @Summary      สร้างผู้ใช้ใหม่
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      CreateUserRequest  true  "ข้อมูลผู้ใช้"
+// @Success      201   {object}  models.User
+// @Failure      400   {object}  ErrorResponse
+// @Failure      409   {object}  ErrorResponse
+// @Router       /admin/users [post]
 func (h *AdminHandler) CreateUser(c *gin.Context) {
 	var body struct {
 		Username string          `json:"username" binding:"required"`
@@ -118,6 +141,17 @@ func (h *AdminHandler) CreateUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, user)
 }
 
+// UpdateUserStatus godoc
+// @Summary      อัพเดตสถานะผู้ใช้ (เปิด/ปิด)
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path  int                      true  "User ID"
+// @Param        body  body  UpdateUserStatusRequest  true  "สถานะใหม่"
+// @Success      200   {object}  models.User
+// @Failure      404   {object}  ErrorResponse
+// @Router       /admin/users/{id}/status [put]
 func (h *AdminHandler) UpdateUserStatus(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var body struct{ IsActive bool `json:"is_active"` }
@@ -129,4 +163,47 @@ func (h *AdminHandler) UpdateUserStatus(c *gin.Context) {
 	}
 	database.DB.Model(&user).Update("is_active", body.IsActive)
 	c.JSON(http.StatusOK, user)
+}
+
+// Logs godoc
+// @Summary      ดู activity log
+// @Tags         admin
+// @Produce      json
+// @Security     BearerAuth
+// @Param        user_id  query  int     false  "กรองตาม user ID"
+// @Param        method   query  string  false  "กรองตาม HTTP method" Enums(GET, POST, PUT, DELETE)
+// @Param        page     query  int     false  "หน้า (default 1)"
+// @Param        limit    query  int     false  "จำนวนต่อหน้า (default 50)"
+// @Success      200      {object}  LogsResponse
+// @Router       /admin/logs [get]
+func (h *AdminHandler) Logs(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 200 {
+		limit = 50
+	}
+	offset := (page - 1) * limit
+
+	var total int64
+	q := database.DB.Model(&models.ActivityLog{})
+	if userID := c.Query("user_id"); userID != "" {
+		q = q.Where("user_id = ?", userID)
+	}
+	if method := c.Query("method"); method != "" {
+		q = q.Where("method = ?", method)
+	}
+	q.Count(&total)
+
+	var logs []models.ActivityLog
+	q.Order("created_at DESC").Offset(offset).Limit(limit).Find(&logs)
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":  logs,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+	})
 }

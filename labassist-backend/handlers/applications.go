@@ -11,10 +11,44 @@ import (
 	"gorm.io/gorm"
 )
 
+// ApplyRequest is the request body for submitting an application
+type ApplyRequest struct {
+	CourseID    uint               `json:"course_id" binding:"required" example:"1"`
+	RoleApplied models.RoleApplied `json:"role_applied" binding:"required" example:"ta"`
+	Motivation  *string            `json:"motivation,omitempty" example:"ต้องการช่วยสอนนักศึกษา"`
+}
+
+// ReviewRequest is the request body for reviewing an application
+type ReviewRequest struct {
+	Status models.AppStatus `json:"status" binding:"required" example:"accepted"`
+	Note   *string          `json:"note,omitempty" example:"ผ่านการคัดเลือก"`
+}
+
+// BulkReviewRequest is the request body for bulk reviewing applications
+type BulkReviewRequest struct {
+	ApplicationIDs []uint           `json:"application_ids" binding:"required"`
+	Status         models.AppStatus `json:"status" binding:"required" example:"accepted"`
+	Note           *string          `json:"note,omitempty"`
+}
+
+// UpdateProfileRequest is the request body for updating student profile
+type UpdateProfileRequest struct {
+	FullName *string `json:"full_name,omitempty" example:"สมชาย ใจดี"`
+	Year     *int    `json:"year,omitempty" example:"3"`
+	Faculty  *string `json:"faculty,omitempty" example:"วิทยาการคอมพิวเตอร์"`
+}
+
 type ApplicationHandler struct{}
 
 func NewApplicationHandler() *ApplicationHandler { return &ApplicationHandler{} }
 
+// StudentDashboard godoc
+// @Summary      หน้าหลักนักศึกษา
+// @Tags         student
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  StudentDashboardResponse
+// @Router       /student/dashboard [get]
 func (h *ApplicationHandler) StudentDashboard(c *gin.Context) {
 	studentID, _ := c.Get("user_id")
 
@@ -60,13 +94,20 @@ func (h *ApplicationHandler) StudentDashboard(c *gin.Context) {
 	})
 }
 
+// MyApplications godoc
+// @Summary      รายการใบสมัครของนักศึกษา
+// @Tags         student
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {array}   models.Application
+// @Router       /student/applications [get]
 func (h *ApplicationHandler) MyApplications(c *gin.Context) {
 	studentID, _ := c.Get("user_id")
 
 	type AppRow struct {
 		models.Application
-		CourseCode  string `gorm:"column:course_code"`
-		CourseTitle string `gorm:"column:course_title"`
+		CourseCode   string `gorm:"column:course_code"`
+		CourseTitle  string `gorm:"column:course_title"`
 		ReviewerName string `gorm:"column:reviewer_name"`
 	}
 
@@ -88,12 +129,24 @@ func (h *ApplicationHandler) MyApplications(c *gin.Context) {
 	c.JSON(http.StatusOK, apps)
 }
 
+// Apply godoc
+// @Summary      สมัครเป็น TA หรือ Lab Boy
+// @Tags         student
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      ApplyRequest  true  "ข้อมูลการสมัคร"
+// @Success      201   {object}  models.Application
+// @Failure      400   {object}  ErrorResponse
+// @Failure      404   {object}  ErrorResponse
+// @Failure      409   {object}  ErrorResponse
+// @Router       /student/applications [post]
 func (h *ApplicationHandler) Apply(c *gin.Context) {
 	studentID, _ := c.Get("user_id")
 	var body struct {
-		CourseID    uint                `json:"course_id" binding:"required"`
-		RoleApplied models.RoleApplied  `json:"role_applied" binding:"required"`
-		Motivation  *string             `json:"motivation"`
+		CourseID    uint               `json:"course_id" binding:"required"`
+		RoleApplied models.RoleApplied `json:"role_applied" binding:"required"`
+		Motivation  *string            `json:"motivation"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -143,6 +196,16 @@ func (h *ApplicationHandler) Apply(c *gin.Context) {
 	c.JSON(http.StatusCreated, app)
 }
 
+// Withdraw godoc
+// @Summary      ถอนใบสมัคร
+// @Tags         student
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id  path  int  true  "Application ID"
+// @Success      200  {object}  models.Application
+// @Failure      400  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Router       /student/applications/{id}/withdraw [put]
 func (h *ApplicationHandler) Withdraw(c *gin.Context) {
 	studentID, _ := c.Get("user_id")
 	id, _ := strconv.Atoi(c.Param("id"))
@@ -173,6 +236,62 @@ func (h *ApplicationHandler) Withdraw(c *gin.Context) {
 	c.JSON(http.StatusOK, app)
 }
 
+// GetProfile godoc
+// @Summary      ดูโปรไฟล์นักศึกษา
+// @Tags         student
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  models.User
+// @Router       /student/profile [get]
+func (h *ApplicationHandler) GetProfile(c *gin.Context) {
+	studentID, _ := c.Get("user_id")
+	var user models.User
+	database.DB.First(&user, studentID)
+	c.JSON(http.StatusOK, user)
+}
+
+// UpdateProfile godoc
+// @Summary      แก้ไขโปรไฟล์นักศึกษา
+// @Tags         student
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      UpdateProfileRequest  true  "ข้อมูลโปรไฟล์ที่ต้องการแก้ไข"
+// @Success      200   {object}  models.User
+// @Router       /student/profile [put]
+func (h *ApplicationHandler) UpdateProfile(c *gin.Context) {
+	studentID, _ := c.Get("user_id")
+	var body map[string]interface{}
+	c.ShouldBindJSON(&body)
+
+	allowed := map[string]interface{}{}
+	for _, k := range []string{"full_name", "year", "faculty"} {
+		if v, ok := body[k]; ok {
+			allowed[k] = v
+		}
+	}
+
+	var user models.User
+	database.DB.First(&user, studentID)
+	if len(allowed) > 0 {
+		database.DB.Model(&user).Updates(allowed)
+	}
+	c.JSON(http.StatusOK, user)
+}
+
+// Review godoc
+// @Summary      ตรวจสอบใบสมัคร (อาจารย์/สตาฟ/แอดมิน)
+// @Tags         instructor
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path  int            true  "Application ID"
+// @Param        body  body  ReviewRequest  true  "ผลการตรวจสอบ"
+// @Success      200   {object}  models.Application
+// @Failure      400   {object}  ErrorResponse
+// @Failure      403   {object}  ErrorResponse
+// @Failure      404   {object}  ErrorResponse
+// @Router       /instructor/applications/{id}/review [put]
 func (h *ApplicationHandler) Review(c *gin.Context) {
 	reviewerID, _ := c.Get("user_id")
 	role, _ := c.Get("role")
@@ -238,6 +357,16 @@ func (h *ApplicationHandler) Review(c *gin.Context) {
 	c.JSON(http.StatusOK, app)
 }
 
+// BulkReview godoc
+// @Summary      ตรวจสอบใบสมัครแบบกลุ่ม
+// @Tags         instructor
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      BulkReviewRequest  true  "รายการใบสมัครและผลการตรวจสอบ"
+// @Success      200   {object}  BulkReviewResponse
+// @Failure      400   {object}  ErrorResponse
+// @Router       /instructor/applications/bulk-review [put]
 func (h *ApplicationHandler) BulkReview(c *gin.Context) {
 	reviewerID, _ := c.Get("user_id")
 	var body struct {
@@ -258,31 +387,4 @@ func (h *ApplicationHandler) BulkReview(c *gin.Context) {
 			"status": body.Status, "reviewed_at": now, "reviewed_by_id": rid, "note": body.Note,
 		})
 	c.JSON(http.StatusOK, gin.H{"updated": result.RowsAffected})
-}
-
-func (h *ApplicationHandler) GetProfile(c *gin.Context) {
-	studentID, _ := c.Get("user_id")
-	var user models.User
-	database.DB.First(&user, studentID)
-	c.JSON(http.StatusOK, user)
-}
-
-func (h *ApplicationHandler) UpdateProfile(c *gin.Context) {
-	studentID, _ := c.Get("user_id")
-	var body map[string]interface{}
-	c.ShouldBindJSON(&body)
-
-	allowed := map[string]interface{}{}
-	for _, k := range []string{"full_name", "year", "faculty"} {
-		if v, ok := body[k]; ok {
-			allowed[k] = v
-		}
-	}
-
-	var user models.User
-	database.DB.First(&user, studentID)
-	if len(allowed) > 0 {
-		database.DB.Model(&user).Updates(allowed)
-	}
-	c.JSON(http.StatusOK, user)
 }

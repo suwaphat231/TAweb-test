@@ -9,10 +9,50 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// CreateCourseRequest is the request body for creating a course
+type CreateCourseRequest struct {
+	Code         string              `json:"code" binding:"required" example:"CS101"`
+	Title        string              `json:"title" binding:"required" example:"Introduction to Programming"`
+	Semester     string              `json:"semester" binding:"required" example:"1"`
+	AcademicYear int                 `json:"academic_year" binding:"required" example:"2567"`
+	TASlots      int                 `json:"ta_slots" example:"3"`
+	LabBoySlots  int                 `json:"labboy_slots" example:"2"`
+	Status       models.CourseStatus `json:"status" example:"draft"`
+	Description  *string             `json:"description,omitempty"`
+	Requirements *string             `json:"requirements,omitempty"`
+}
+
+// UpdateCourseRequest is the request body for updating a course
+type UpdateCourseRequest struct {
+	Code         *string              `json:"code,omitempty" example:"CS101"`
+	Title        *string              `json:"title,omitempty" example:"Introduction to Programming"`
+	Semester     *string              `json:"semester,omitempty" example:"1"`
+	AcademicYear *int                 `json:"academic_year,omitempty" example:"2567"`
+	TASlots      *int                 `json:"ta_slots,omitempty" example:"3"`
+	LabBoySlots  *int                 `json:"labboy_slots,omitempty" example:"2"`
+	Status       *models.CourseStatus `json:"status,omitempty" example:"open"`
+	Description  *string              `json:"description,omitempty"`
+	Requirements *string              `json:"requirements,omitempty"`
+}
+
+// UpdateCourseStatusRequest is the request body for updating course status only
+type UpdateCourseStatusRequest struct {
+	Status models.CourseStatus `json:"status" example:"open"`
+}
+
 type CourseHandler struct{}
 
 func NewCourseHandler() *CourseHandler { return &CourseHandler{} }
 
+// List godoc
+// @Summary      รายการวิชาทั้งหมด (สาธารณะ)
+// @Tags         courses
+// @Produce      json
+// @Param        status  query  string  false  "กรองตามสถานะ" Enums(open, closing_soon, closed, draft)
+// @Param        q       query  string  false  "ค้นหาด้วยชื่อหรือรหัสวิชา"
+// @Success      200     {array}   models.Course
+// @Failure      500     {object}  ErrorResponse
+// @Router       /courses [get]
 func (h *CourseHandler) List(c *gin.Context) {
 	status := c.Query("status")
 	q := c.Query("q")
@@ -36,6 +76,14 @@ func (h *CourseHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, courses)
 }
 
+// Get godoc
+// @Summary      ดูรายละเอียดวิชา (สาธารณะ)
+// @Tags         courses
+// @Produce      json
+// @Param        id  path  int  true  "Course ID"
+// @Success      200  {object}  models.Course
+// @Failure      404  {object}  ErrorResponse
+// @Router       /courses/{id} [get]
 func (h *CourseHandler) Get(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var course models.Course
@@ -47,6 +95,14 @@ func (h *CourseHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, course)
 }
 
+// InstructorList godoc
+// @Summary      รายการวิชาของอาจารย์
+// @Tags         courses
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {array}   models.Course
+// @Failure      500  {object}  ErrorResponse
+// @Router       /instructor/courses [get]
 func (h *CourseHandler) InstructorList(c *gin.Context) {
 	instructorID, _ := c.Get("user_id")
 	role, _ := c.Get("role")
@@ -82,18 +138,29 @@ func (h *CourseHandler) InstructorList(c *gin.Context) {
 	c.JSON(http.StatusOK, courses)
 }
 
+// Create godoc
+// @Summary      สร้างวิชาใหม่
+// @Tags         courses
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      CreateCourseRequest  true  "ข้อมูลวิชา"
+// @Success      201   {object}  models.Course
+// @Failure      400   {object}  ErrorResponse
+// @Failure      500   {object}  ErrorResponse
+// @Router       /instructor/courses [post]
 func (h *CourseHandler) Create(c *gin.Context) {
 	instructorID, _ := c.Get("user_id")
 	var body struct {
-		Code         string               `json:"code" binding:"required"`
-		Title        string               `json:"title" binding:"required"`
-		Semester     string               `json:"semester" binding:"required"`
-		AcademicYear int                  `json:"academic_year" binding:"required"`
-		TASlots      int                  `json:"ta_slots"`
-		LabBoySlots  int                  `json:"labboy_slots"`
-		Status       models.CourseStatus  `json:"status"`
-		Description  *string              `json:"description"`
-		Requirements *string              `json:"requirements"`
+		Code         string              `json:"code" binding:"required"`
+		Title        string              `json:"title" binding:"required"`
+		Semester     string              `json:"semester" binding:"required"`
+		AcademicYear int                 `json:"academic_year" binding:"required"`
+		TASlots      int                 `json:"ta_slots"`
+		LabBoySlots  int                 `json:"labboy_slots"`
+		Status       models.CourseStatus `json:"status"`
+		Description  *string             `json:"description"`
+		Requirements *string             `json:"requirements"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -128,6 +195,18 @@ func (h *CourseHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, course)
 }
 
+// Update godoc
+// @Summary      แก้ไขข้อมูลวิชา
+// @Tags         courses
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path  int                 true  "Course ID"
+// @Param        body  body  UpdateCourseRequest  true  "ข้อมูลที่ต้องการแก้ไข"
+// @Success      200   {object}  models.Course
+// @Failure      403   {object}  ErrorResponse
+// @Failure      404   {object}  ErrorResponse
+// @Router       /instructor/courses/{id} [put]
 func (h *CourseHandler) Update(c *gin.Context) {
 	instructorID, _ := c.Get("user_id")
 	role, _ := c.Get("role")
@@ -149,6 +228,18 @@ func (h *CourseHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, course)
 }
 
+// UpdateStatus godoc
+// @Summary      อัพเดตสถานะวิชา
+// @Tags         courses
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path  int                        true  "Course ID"
+// @Param        body  body  UpdateCourseStatusRequest  true  "สถานะใหม่"
+// @Success      200   {object}  models.Course
+// @Failure      403   {object}  ErrorResponse
+// @Failure      404   {object}  ErrorResponse
+// @Router       /instructor/courses/{id}/status [put]
 func (h *CourseHandler) UpdateStatus(c *gin.Context) {
 	instructorID, _ := c.Get("user_id")
 	role, _ := c.Get("role")
@@ -170,6 +261,19 @@ func (h *CourseHandler) UpdateStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, course)
 }
 
+// Applicants godoc
+// @Summary      รายชื่อผู้สมัครของวิชา
+// @Tags         courses
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id           path   int     true   "Course ID"
+// @Param        role_applied query  string  false  "กรองตามประเภทที่สมัคร" Enums(ta, labboy)
+// @Param        status       query  string  false  "กรองตามสถานะ" Enums(pending, accepted, rejected, withdrawn)
+// @Param        search       query  string  false  "ค้นหาด้วยชื่อหรือรหัสนักศึกษา"
+// @Success      200          {array}   models.Application
+// @Failure      403          {object}  ErrorResponse
+// @Failure      404          {object}  ErrorResponse
+// @Router       /instructor/courses/{id}/applicants [get]
 func (h *CourseHandler) Applicants(c *gin.Context) {
 	instructorID, _ := c.Get("user_id")
 	role, _ := c.Get("role")
@@ -185,7 +289,7 @@ func (h *CourseHandler) Applicants(c *gin.Context) {
 		return
 	}
 
-	roleFilter  := c.Query("role_applied")
+	roleFilter   := c.Query("role_applied")
 	statusFilter := c.Query("status")
 	search       := c.Query("search")
 
